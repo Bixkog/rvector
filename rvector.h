@@ -5,7 +5,10 @@
 #include <new>
 #include <iostream>
 #include <stdexcept>
+#include <type_traits>
 #include <string.h>
+
+#include "allocator.h"
 
 template <class T> 
 class rvector;
@@ -123,136 +126,12 @@ public:
  //    void     swap(rvector<T>& other);
  //    void     clear() noexcept;
 private:
-
-    T* allocate(size_type n);
-    void deallocate(T* p, size_type n);
-    void destruct();
-
-    void fill(size_type n, const T& value = T());
-    template <class InputIterator>
-    void fill(InputIterator begin, InputIterator end);
-
-    size_type fix_capacity(size_type n);
-    void realloc_(size_type n);
-    void change_capacity(size_type n);
-    void grow();
-private:
 	T* data_;
 	size_type length;
     size_type capacity;
 public:
     constexpr static size_t map_threshold = 4096 / sizeof(T);
 };
-// // private methods
-// template <typename T>
-// template <class InputIterator>
-// void rvector<T>::initialize_array(InputIterator begin, InputIterator end)
-// {
-//     auto it = data_;
-//     while(begin != end)
-//         *(it++) = *(begin++);   
-// }
-
-// private methods
-
-template <typename T>
-T* rvector<T>::allocate(rvector<T>::size_type n)
-{
-    if(n > map_threshold)
-        return (T*) mmap(NULL, n*sizeof(T), 
-                    PROT_READ | PROT_WRITE,
-                    MAP_PRIVATE | MAP_ANONYMOUS,
-                    -1, 0);
-    else
-        return (T*) malloc(n*sizeof(T));
-}
-
-template <typename T>
-void rvector<T>::deallocate(T* p, rvector<T>::size_type n)
-{
-    if(n > map_threshold)
-        munmap(p, n*sizeof(T));
-    else
-        free(p);
-}
-
-template <typename T>
-void rvector<T>::realloc_(rvector<T>::size_type n)
-{
-
-    if((n > map_threshold) != (capacity > map_threshold))
-    {
-        T* new_data_ = allocate(n);
-        memcpy(new_data_, data_, length * sizeof(T));
-        deallocate(data_, capacity);
-        data_ = new_data_;
-    }
-    else
-    {
-        if(capacity > map_threshold)
-            data_ = (T*) mremap(data_, capacity*sizeof(T), 
-                       n*sizeof(T), MREMAP_MAYMOVE);
-        else
-            data_ = (T*) realloc(data_, n*sizeof(T));
-    }
-}
-
-template <typename T>
-void rvector<T>::change_capacity(rvector<T>::size_type n)
-{
-    size_type new_capacity = fix_capacity(n);
-    if(data_ == nullptr)
-        data_ = allocate(new_capacity);
-    else
-        realloc_(new_capacity);
-    capacity = new_capacity;
-}
-
-
-template<typename T>
-void rvector<T>::destruct()
-{
-    for(auto& e : *this)
-            e.~T();
-}
-
-template<typename T>
-void rvector<T>::fill(rvector<T>::size_type n, const T& value)
-{
-    for(size_type i = 0; i < n; ++i)
-        new (data_ + i) T(value);
-}
-
-template <typename T>
-template <typename InputIterator>
-void rvector<T>::fill(InputIterator begin, InputIterator end)
-{
-    size_type i = 0;
-    while (begin != end)
-    {
-        new (data_ + i) T(*begin);
-        begin++;
-        i++;
-    }
-}
-
-template<typename T>
-typename rvector<T>::size_type 
-rvector<T>::fix_capacity(rvector<T>::size_type n)
-{
-    if(n < map_threshold)
-        return n;
-    return map_threshold * (n/map_threshold + 1);
-}
-
-template <typename T>
-void rvector<T>::grow()
-{
-    if(length < capacity) return;
-    change_capacity(capacity*2 + 1);
-}
-
-// public methods
 
 template<typename T>
 rvector<T>::rvector() noexcept
@@ -266,10 +145,10 @@ template<typename T>
 rvector<T>::rvector(rvector<T>::size_type length, const T& value)
  : data_(nullptr),
  length(length),
- capacity(fix_capacity(length))
+ capacity(mm::fix_capacity(length))
 {
-    data_ = allocate(capacity);
-    fill(length, value);
+    data_ = mm::allocate<T>(capacity);
+    mm::fill(data_, length, value);
 }
 
 template<typename T>
@@ -278,8 +157,8 @@ rvector<T>::rvector(const rvector<T>& other)
  length(other.length),
  capacity(other.capacity)
 {
-    data_ = allocate(capacity);
-    fill(other.begin(), other.end());
+    data_ = mm::allocate<T>(capacity);
+    mm::fill(data_, other.begin(), other.end());
 }
 
 template<typename T>
@@ -297,17 +176,17 @@ template<typename T>
 rvector<T>::rvector(std::initializer_list<T> ilist)
  : data_(nullptr),
  length(ilist.size()),
- capacity(fix_capacity(ilist.size()))
+ capacity(mm::fix_capacity(ilist.size()))
 {
-    data_ = allocate(capacity);
-    fill(ilist.begin(), ilist.end());
+    data_ = mm::allocate<T>(capacity);
+    mm::fill(data_, ilist.begin(), ilist.end());
 }
 
 template<typename T>
 rvector<T>::~rvector()
 {
-    destruct();
-    deallocate(data_, capacity);
+    mm::destruct(data_, data_ + length);
+    mm::deallocate(data_, capacity);
 }
 
 template <typename T>
@@ -342,11 +221,10 @@ template <typename T>
 rvector<T>& rvector<T>::operator=(const rvector<T>& other)
 {
     if(other.length > length)
-        change_capacity(other.capacity);
+        mm::change_capacity(data_, length, capacity, other.capacity);
 
-    // destruct();
-    fill(other.begin(), other.end());
-
+    mm::destruct(data_, data_ + length);
+    mm::fill(data_, other.begin(), other.end());
     length = other.length;
 
     return *this;
@@ -366,14 +244,11 @@ template <typename T>
 rvector<T>& rvector<T>::operator=(std::initializer_list<T> ilist)
 {
     if(ilist.size() > capacity)
-        change_capacity(ilist.size());
+        mm::change_capacity(data_, length, capacity, ilist.size());
 
-    // destruct();
-    fill(ilist.begin(), ilist.end());
-
+    mm::destruct(data_, data_ + length);
+    mm::fill(data_, ilist.begin(), ilist.end());
     length = ilist.size();
-
-
     return *this;
 } 
 
@@ -381,10 +256,10 @@ template <typename T>
 void rvector<T>::assign(rvector<T>::size_type count, const T& value)
 {
     if(count > capacity)
-        change_capacity(count);
+        mm::change_capacity(data_, length, capacity, count);
 
-    // destruct();
-    fill(count, value);
+    mm::destruct(data_, data_ + length);
+    mm::fill(data_, count, value);
     length = count;
 }
 
@@ -413,14 +288,14 @@ void rvector<T>::reserve(rvector<T>::size_type n)
 {
     if(n <= capacity) return;
     n = n < 2*capacity? 2*capacity: n;
-    change_capacity(n);
+    mm::change_capacity(data_, length, capacity, n);
 }
 
 template <typename T>
 void rvector<T>::shrink_to_fit()
 {
     if(capacity < map_threshold)
-        change_capacity(length);
+        mm::change_capacity(data_, length, capacity, length);
 }
 
 template <typename T>
@@ -500,7 +375,7 @@ template <class... Args>
 void rvector<T>::emplace_back(Args&&... args)
 {
     if(length == capacity)
-        grow();
+        mm::grow(data_, length, capacity);
     new (data_ + length) T(std::forward<Args>(args)...);
     length++;
 }
@@ -508,7 +383,7 @@ void rvector<T>::emplace_back(Args&&... args)
 template <typename T>
 void rvector<T>::push_back(const T& x)
 {
-    grow();
+    mm::grow(data_, length, capacity);
     new (data_ + length) T(x);
     length++;
 }
@@ -516,7 +391,7 @@ void rvector<T>::push_back(const T& x)
 template <typename T>
 void rvector<T>::push_back(T&& x)
 {
-    grow();
+    mm::grow(data_, length, capacity);
     new (data_ + length) T(std::forward<T>(x));
     length++;
 }
@@ -524,6 +399,7 @@ void rvector<T>::push_back(T&& x)
 template <typename T>
 void rvector<T>::pop_back()
 {
+    if(length == 0) return;
     back().~T();
     length--;
 }
@@ -535,9 +411,9 @@ rvector<T>::emplace(rvector<T>::const_iterator position,
                     Args&&... args)
 {
     size_type n = position - begin();
-    grow();
+    mm::grow(data_, length, capacity);
     iterator position_ = begin() + n;
-    memmove(position_+1, position_, (end() - position_) * sizeof(T));
+    mm::shiftr_data(position_, (end() - position_));
     new (position_) T(std::forward<Args>(args)...);
     length++;
     return position_;
