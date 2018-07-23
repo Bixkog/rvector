@@ -2,58 +2,7 @@
 #include <gtest/gtest.h>
 #include <string>
 #include <boost/preprocessor/repetition/repeat.hpp>
-
-struct TestType
-{
-	int n;
-	int* p;
-	static int aliveObjects;
-
-	TestType(int a = 5, int b = 1)
-	: n(a),
-	p(new int(b))
-	{
-		std::cout << "d_c: " << aliveObjects << std::endl;
-		aliveObjects++;
-	}
-
-	TestType(const TestType& other):
-	n(other.n),
-	p(new int(*other.p))
-	{
-		std::cout << "c_c: " << aliveObjects << std::endl;
-		aliveObjects++;
-	}
-
-	~TestType()
-	{
-		std::cout << "des: " << aliveObjects << std::endl;
-		delete p;
-		aliveObjects--;
-	}
-
-	TestType& operator = (const TestType& other)
-	{
-		n = other.n;
-		p = new int(*other.p);
-		return *this;
-	}
-
-	bool operator == (const TestType& other) const
-	{
-		return n == other.n and *p == *other.p;
-	}
-
-	friend 
-	std::ostream& operator << (std::ostream& out, TestType t)
-	{
-		out << t.n;
-		return out;
-	}
-
-};
-
-int TestType::aliveObjects = 0;
+#include "test_type.h"
 
 template<typename T>
 T init_value(int i = 0)
@@ -210,20 +159,15 @@ TYPED_TEST(rvector_test, assign_ss)
 {
 	auto val1 = init_value<TypeParam> (1);
 	auto val2 = init_value<TypeParam> (2);
-	std::cout << "v1" << std::endl;	
 	rvector<TypeParam> v1(5, val1);
-	std::cout << "v2" << std::endl;	
 	rvector<TypeParam> v2(6, val2);
-	std::cout << "assign" << std::endl;
 	v1 = v2;
 
 	EXPECT_EQ(v1.size(), v2.size());
 	EXPECT_EQ(v1.size(), 6u);
 
-	std::cout << "test" << std::endl;
 	for(auto& e : v1)
 		EXPECT_EQ(e, val2);
-	std::cout << "end" << std::endl;
 }
 
 TYPED_TEST(rvector_test, assign_sb)

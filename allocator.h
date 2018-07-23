@@ -61,13 +61,12 @@ namespace mm
 	NT_Destr<T>
 	destruct(T* begin, T* end)
 	{
-		while(begin != end)
-	        (begin++)->~T();
+		std::destroy(begin, end);
 	}
 
 	template<typename T>
 	T_Destr<T>
-	destruct(T* begin, T* end)
+	destruct(T*, T*)
 	{
 	}
 
@@ -82,25 +81,24 @@ namespace mm
 	template<typename T>
 	NT_Copy<T> fill(T* data, size_type n, const T& value = T())
 	{
-		for(size_type i = 0; i < n; i++)
-			new (data + i) T(value);
+		std::uninitialized_fill_n(data, n, value);
 	}
 
 	template<typename T, typename InputIterator>
 	T_Copy<T> fill(T* data, InputIterator begin, InputIterator end)
 	{
-		std::copy(begin, end, data);
+		std::uninitialized_copy_n(begin, end - begin, data);
 	}
 
 	template<typename T, typename InputIterator>
 	NT_Copy<T> fill(T* data, InputIterator begin, InputIterator end)
 	{
-		while(begin != end)
-			new (data++) T(*(begin++));
+		std::uninitialized_copy_n(begin, end - begin, data);
 	}
 
 // fix_capacity
 
+	inline
 	size_type fix_capacity(size_type n)
 	{
 		if(n < map_threshold)
@@ -140,8 +138,7 @@ namespace mm
             	return (T*) new_data;
         }
 	    T* new_data = allocate<T>(n);
-	    for(size_type i = 0; i < length; ++i)
-	    	new (new_data+i) T(std::move(*(data+i)));
+	    std::uninitialized_move_n(data, length, new_data);
 	    destruct(data, data + length);
 	    deallocate(data, capacity);
 	    return new_data;
@@ -155,10 +152,10 @@ namespace mm
 						size_type n)
 	{
 		size_type new_capacity = fix_capacity(n);
-	    if(data == nullptr)
-	        data = allocate<T>(new_capacity);
-	    else
+	    if(data)
 	        data = realloc_(data, length, capacity, new_capacity);
+	    else
+	        data = allocate<T>(new_capacity);
 	    capacity = new_capacity;
 	}
 

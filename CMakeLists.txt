@@ -13,6 +13,10 @@ add_executable(runUnitTests
 add_executable(runBenchmarks
 	benchmark.cpp)
 
+add_executable(runProfile
+    profile.cpp)
+set_target_properties(runProfile PROPERTIES COMPILE_FLAGS "-g" )
+
 target_link_libraries(runUnitTests gtest gmock_main pthread)
 target_link_libraries(runBenchmarks benchmark pthread)
 
