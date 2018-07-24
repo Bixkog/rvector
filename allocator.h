@@ -5,8 +5,12 @@
 #include <sys/mman.h>
 #include <iostream>
 
+
+
 namespace mm
 {
+	int mremap_skips;
+	int grows;
 	// Policies
 	template<typename T>
 	using Trivial = std::enable_if_t<std::is_trivial<T>::value>;
@@ -130,12 +134,16 @@ namespace mm
 	template<typename T>
 	NT_Copy<T, T*> realloc_(T* data, size_type length, size_type capacity, size_type n)
 	{
+		grows++;
         if(capacity > map_threshold)
         {
             void* new_data = mremap(data, capacity*sizeof(T), 
                         		n*sizeof(T), 0);
             if(new_data != (void*)-1)
+            {
+            	mremap_skips++;
             	return (T*) new_data;
+            }
         }
 	    T* new_data = allocate<T>(n);
 	    std::uninitialized_move_n(data, length, new_data);

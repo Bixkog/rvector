@@ -29,7 +29,6 @@ class rvector;
 // template <class T>
 //     void swap(vector<T>& x, vector<T>& y);
 
-
 template<typename T>
 class rvector
 {
