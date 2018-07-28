@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.5)
 project(rvector)
-set(CMAKE_CXX_FLAGS_DEBUG "-std=c++17 -ggdb -g -Wall -Wextra")
-set(CMAKE_CXX_FLAGS_RELEASE "-std=c++17 -O3 -flto -march=native -Wall -Wextra")
+set(CMAKE_CXX_FLAGS_DEBUG "-std=c++17 -ggdb -g -Wall -Wextra -static")
+set(CMAKE_CXX_FLAGS_RELEASE "-std=c++17 -O3 -Wall -Wextra -static")
 
 add_subdirectory(/home/wojtek/Downloads/googletest binary_dir EXCLUDE_FROM_ALL)
 
