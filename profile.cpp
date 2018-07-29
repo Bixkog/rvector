@@ -17,7 +17,7 @@ public:
 		auto end = Clock::now();
 		std::cout << name << ": " 
 				  << std::chrono::duration<double>(end - begin).count()
-				  << " ms"
+				  << " s"
 				  << std::endl;
 	}
 private:
@@ -25,52 +25,47 @@ private:
 	std::chrono::time_point<Clock> begin;
 };
 
+void check_mremap()
+{
+	std::cout << mm::mremap_skips << " " << mm::grows << std::endl;
+	mm::mremap_skips = 0;
+	mm::grows = 0;
+}
+
+template<typename F, typename... Args>
+void bench_function(F f, std::string name, int max_size, Args... args)
+{
+	for(int size = 10; size < max_size; size *= 10)
+	{
+		int t = max_size / size / 10;
+		auto timer = BenchTimer(name + "/" + std::to_string(size));
+		while(t-->0) f(size, args...);
+	}
+}
+
+template<typename V>
+void push_back_bench(int size, typename V::value_type e)
+{
+	V v;
+	for(int i = 0; i < size; ++i)
+		v.push_back(e);
+}
+
+
 int main()
 {
-	{
-		rvector<TestType> v;
-		TestType e{};
-		{
-			auto timer = BenchTimer("rvector TestType 10e7");
-			for(int i = 0; i < 10000000; ++i)
-				v.push_back(e);
-		}
-		std::cout << mm::mremap_skips << " " << mm::grows << std::endl;
-		
-		std::vector<TestType> v_;
-		{
-			auto timer = BenchTimer("std::vector TestType 10e7");
-			for(int i = 0; i < 10000000; ++i)
-				v_.push_back(e);
-		}
-		mm::mremap_skips = 0;
-		mm::grows = 0;
-	}
-
-	{
-		std::string e = "askdbjhbavsbdjkhvcas";
-		{
-			auto timer = BenchTimer("rvector TestType 10e7");
-			for(int t = 0; t < 10; ++t)
-			{
-				rvector<std::string> v;
-				for(int i = 0; i < 10000000; ++i)
-					v.push_back(e);
-			}
-		}
-		std::cout << mm::mremap_skips << " " << mm::grows << std::endl;
-		
-		
-		{
-			auto timer = BenchTimer("std::vector TestType 10e7");
-			for(int t = 0; t < 10; ++t)
-			{
-				std::vector<std::string> v_;
-				for(int i = 0; i < 10000000; ++i)
-					v_.push_back(e);
-			}
-		}
-		mm::mremap_skips = 0;
-		mm::grows = 0;
-	}
+	bench_function(push_back_bench<std::vector<TestType>>, 
+					"st::vector_TestType_push_back", 10e7, 
+					TestType{});
+	bench_function(push_back_bench<rvector<TestType>>, 
+					"rvector_TestType_push_back", 10e7, 
+					TestType{});
+	check_mremap();
+	bench_function(push_back_bench<std::vector<std::string>>, 
+					"std::vector_string_push_back", 10e7, 
+					"testtesttesttesttesttesttest");
+	bench_function(push_back_bench<rvector<std::string>>, 
+					"rvector_string_push_back", 10e7, 
+					"testtesttesttesttesttesttest");
+	check_mremap();
 }
