@@ -1,7 +1,7 @@
 #include <benchmark/benchmark.h>
-#include "rvector.h"
 #include <vector>
 #include <string>
+#include "rvector.h"
 #include "test_type.h"
 
 template<typename T>
@@ -34,14 +34,14 @@ void BM_push(benchmark::State& state)
 }
 
 // BENCHMARK_TEMPLATE(BM_push, std::vector<int>)->Range(1<<10, 1<<27);
-// BENCHMARK_TEMPLATE(BM_push, rvector<int>)->Range(1<<10, 1<<27);
+BENCHMARK_TEMPLATE(BM_push, rvector<int>)->Range(1<<10, 1<<27);
 // BENCHMARK_TEMPLATE(BM_push, std::vector<char>)->Range(1<<10, 1<<27);
 // BENCHMARK_TEMPLATE(BM_push, rvector<char>)->Range(1<<10, 1<<27);
 // BENCHMARK_TEMPLATE(BM_push, std::vector<std::array<int, 100>>)->Range(1<<10, 1<<24);
 // BENCHMARK_TEMPLATE(BM_push, rvector<std::array<int, 100>>)->Range(1<<10, 1<<24);
 // BENCHMARK_TEMPLATE(BM_push, std::vector<TestType>)->Range(1<<10, 1<<24);
-BENCHMARK_TEMPLATE(BM_push, rvector<TestType>)->Range(1<<10, 1<<24);
-// BENCHMARK_TEMPLATE(BM_push, std::vector<std::string>)->Range(1<<10, 1<<24);
+// BENCHMARK_TEMPLATE(BM_push, rvector<TestType>)->Range(1<<10, 1<<24);
+BENCHMARK_TEMPLATE(BM_push, std::vector<std::string>)->Range(1<<10, 1<<24);
 BENCHMARK_TEMPLATE(BM_push, rvector<std::string>)->Range(1<<10, 1<<24);
 
 template <typename V>

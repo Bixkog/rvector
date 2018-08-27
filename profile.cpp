@@ -1,5 +1,6 @@
 #include <vector>
 #include <chrono>
+#include <iostream>
 #include "rvector.h"
 #include "test_type.h"
 
@@ -47,25 +48,34 @@ template<typename V>
 void push_back_bench(int size, typename V::value_type e)
 {
 	V v;
+	V v2;
 	for(int i = 0; i < size; ++i)
+	{
 		v.push_back(e);
+		v2.push_back(e);
+	}
+	std::cout << mm::grows << " " << mm::mremap_skips << std::endl;
+	mm::grows = 0;
+	mm::mremap_skips = 0;
 }
 
 
 int main()
 {
-	bench_function(push_back_bench<std::vector<TestType>>, 
-					"st::vector_TestType_push_back", 10e7, 
-					TestType{});
-	bench_function(push_back_bench<rvector<TestType>>, 
-					"rvector_TestType_push_back", 10e7, 
-					TestType{});
-	check_mremap();
-	bench_function(push_back_bench<std::vector<std::string>>, 
-					"std::vector_string_push_back", 10e7, 
-					"testtesttesttesttesttesttest");
-	bench_function(push_back_bench<rvector<std::string>>, 
-					"rvector_string_push_back", 10e7, 
-					"testtesttesttesttesttesttest");
-	check_mremap();
+	// bench_function(push_back_bench<std::vector<int>>, 
+	// 				"std::vector_TestType_push_back", 10e7, 
+	// 				0);
+	// bench_function(push_back_bench<rvector<int>>, 
+	// 				"rvector_TestType_push_back", 10e7, 
+	// 				0);
+	push_back_bench<rvector<TestType>>(10e7, {});
+	// check_mremap();
+	// bench_function(push_back_bench<std::vector<std::string>>, 
+	// 				"std::vector_string_push_back", 10e7, 
+	// 				"testtesttesttesttesttesttest");
+	// bench_function(push_back_bench<rvector<std::string>>, 
+	// 				"rvector_string_push_back", 10e7, 
+	// 				"testtesttesttesttesttesttest");
+	// check_mremap();
+
 }

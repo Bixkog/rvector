@@ -1,4 +1,5 @@
 #pragma once
+#include <iostream>
 
 struct TestType
 {
@@ -46,5 +47,3 @@ struct TestType
 	}
 
 };
-
-int TestType::aliveObjects = 0;

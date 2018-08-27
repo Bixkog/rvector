@@ -44,7 +44,7 @@ class rvector_test : public ::testing::Test
 	}
 };
 
-const size_t big_size = 1024;
+const size_t big_size = 4096;
 
 
 using TestedTypes = ::testing::Types<int, std::string, TestType>;
@@ -84,6 +84,24 @@ TYPED_TEST(rvector_test, length_big)
 	rvector<TypeParam> v(big_size);
 	for(auto& e : v)
 		EXPECT_EQ(e, TypeParam());	
+}
+
+TYPED_TEST(rvector_test, iterator_small)
+{
+	rvector<TypeParam> v(5);
+	rvector<TypeParam> v2(v.begin(), v.end());
+	for(auto& e : v2)
+		EXPECT_EQ(e, TypeParam());
+	EXPECT_EQ(v2.size(), 5);
+}
+
+TYPED_TEST(rvector_test, iterator_big)
+{
+	rvector<TypeParam> v(big_size);
+	rvector<TypeParam> v2(v.begin(), v.end());
+	for(auto& e : v2)
+		EXPECT_EQ(e, TypeParam());
+	EXPECT_EQ(v2.size(), big_size);
 }
 
 TYPED_TEST(rvector_test, copy_small)
@@ -224,7 +242,7 @@ TYPED_TEST(rvector_test, begin_end)
 	rvector<TypeParam> v1(big_size, val1);
 
 	size_t c = 0;
-	for(auto _ : v1)
+	for(auto _: v1)
 		c++;
 	EXPECT_EQ(c, big_size);
 }
@@ -281,4 +299,11 @@ TYPED_TEST(rvector_test, emplace_position)
 		it = v.emplace(it, val2);
 	for(size_t i = 0; i < v.size(); ++i)
 		EXPECT_EQ(v[i], i%2==0?val1:val2);
+}
+
+TYPED_TEST(rvector_test, clear)
+{
+	rvector<TypeParam> v(big_size);
+	v.clear();
+	EXPECT_EQ(v.size(), 0);
 }

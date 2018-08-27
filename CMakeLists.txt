@@ -1,20 +1,31 @@
 cmake_minimum_required(VERSION 3.5)
 project(rvector)
-set(CMAKE_CXX_FLAGS_DEBUG "-std=c++17 -ggdb -g -Wall -Wextra -static")
-set(CMAKE_CXX_FLAGS_RELEASE "-std=c++17 -O3 -Wall -Wextra -static")
+set(CMAKE_CXX_FLAGS_DEBUG "-std=c++17 -ggdb -g -Wall -Wextra")
+set(CMAKE_CXX_FLAGS_RELEASE "-std=c++17 -O3 -Wall -Wextra")
 
 add_subdirectory(/home/wojtek/Downloads/googletest binary_dir EXCLUDE_FROM_ALL)
 
-enable_testing()
 
 add_executable(runUnitTests
-    test.cpp)
+    test.cpp
+    rvector.h
+    allocator.h
+    test_type.h
+    test_type.cpp)
 
 add_executable(runBenchmarks
-	benchmark.cpp)
+	benchmark.cpp
+    rvector.h
+    allocator.h
+    test_type.h
+    test_type.cpp)
 
 add_executable(runProfile
-    profile.cpp)
+    profile.cpp
+    rvector.h
+    allocator.h
+    test_type.h
+    test_type.cpp)
 
 target_link_libraries(runUnitTests gtest gmock_main pthread)
 target_link_libraries(runBenchmarks benchmark pthread)
