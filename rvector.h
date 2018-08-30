@@ -242,58 +242,58 @@ rvector<T>::end() const noexcept
 
 template <typename T>
 typename rvector<T>::reverse_iterator 
-rvector<T>::rbegin() noexcept // TEST
+rvector<T>::rbegin() noexcept
 {
-    return data_ + length - 1;
+    return reverse_iterator(data_ + length);
 }
 
 template <typename T>
 typename rvector<T>::const_reverse_iterator 
-rvector<T>::rbegin() const noexcept // TEST
+rvector<T>::rbegin() const noexcept
 {
-    return data_ + length - 1;
+    return const_reverse_iterator(data_ + length);
 }
 
 template <typename T>
 typename rvector<T>::reverse_iterator 
-rvector<T>::rend() noexcept // TEST
+rvector<T>::rend() noexcept
 {
-    return data_ - 1;
+    return reverse_iterator(data_);
 }
 
 template <typename T>
 typename rvector<T>::const_reverse_iterator 
-rvector<T>::rend() const noexcept // TEST
+rvector<T>::rend() const noexcept
 {
-    return data_ - 1;
+    return const_reverse_iterator(data_);
 }
 
 template <typename T>
 typename rvector<T>::const_iterator 
-rvector<T>::cbegin() noexcept // TEST
+rvector<T>::cbegin() noexcept
 {
-    return data_;
+    return const_iterator(data_);
 }
 
 template <typename T>
 typename rvector<T>::const_iterator 
-rvector<T>::cend() noexcept // TEST
+rvector<T>::cend() noexcept
 {
-    return data_ + length;
+    return  const_iterator(data_ + length);
 }
 
 template <typename T>
 typename rvector<T>::const_reverse_iterator 
-rvector<T>::crbegin() const noexcept // TEST
+rvector<T>::crbegin() const noexcept
 {
-    return data_ + length - 1;
+    return const_reverse_iterator(data_ + length);
 }
 
 template <typename T>
 typename rvector<T>::const_reverse_iterator 
-rvector<T>::crend() const noexcept // TEST
+rvector<T>::crend() const noexcept
 {
-    return data_ - 1;
+    return const_reverse_iterator(data_);
 }
 
 template <typename T>
@@ -343,9 +343,9 @@ void rvector<T>::assign(rvector<T>::size_type count, const T& value)
 }
 template <typename T>
 template <typename InputIt, typename>
-void rvector<T>::assign(InputIt first, InputIt last) // TEST
+void rvector<T>::assign(InputIt first, InputIt last)
 {
-    auto count = std::distance(first, last);
+    size_t count = std::distance(first, last);
     if(count > capacity_)
         mm::change_capacity(data_, length, capacity_, count);
 
@@ -355,7 +355,7 @@ void rvector<T>::assign(InputIt first, InputIt last) // TEST
 }
 
 template <typename T>
-void rvector<T>::assign(std::initializer_list<T> ilist) // TEST
+void rvector<T>::assign(std::initializer_list<T> ilist)
 {
     assign(ilist.begin(), ilist.end());
 }
@@ -375,7 +375,7 @@ rvector<T>::max_size() const noexcept
 }
 
 template <typename T>
-void rvector<T>::resize(rvector<T>::size_type size) // TEST
+void rvector<T>::resize(rvector<T>::size_type size)
 {
     if(size > capacity_)
         mm::change_capacity(data_, length, capacity_, size);        
@@ -386,9 +386,11 @@ void rvector<T>::resize(rvector<T>::size_type size) // TEST
     }
     else if(size > length)
         mm::fill(data_ + length, size - length);
+    length = size;
 }
+
 template <typename T>
-void rvector<T>::resize(size_type sz, const T& c) // TEST
+void rvector<T>::resize(size_type size, const T& c)
 {
     if(size > capacity_)
         mm::change_capacity(data_, length, capacity_, size);        
@@ -399,6 +401,7 @@ void rvector<T>::resize(size_type sz, const T& c) // TEST
     }
     else if(size > length)
         mm::fill(data_ + length, size - length, c);
+    length = size;
 }
 
 template <typename T>
@@ -552,7 +555,7 @@ rvector<T>::emplace(rvector<T>::const_iterator position,
 
 template <typename T>
 typename rvector<T>::iterator 
-rvector<T>::insert(rvector<T>::const_iterator position, const T& x) // TEST
+rvector<T>::insert(rvector<T>::const_iterator position, const T& x)
 {
     size_type n = position - begin();
     mm::grow(data_, length, capacity_);
@@ -565,20 +568,20 @@ rvector<T>::insert(rvector<T>::const_iterator position, const T& x) // TEST
 
 template <typename T>
 typename rvector<T>::iterator 
-rvector<T>::insert(rvector<T>::const_iterator position, T&& x) // TEST
+rvector<T>::insert(rvector<T>::const_iterator position, T&& x)
 {
     size_type n = position - begin();
     mm::grow(data_, length, capacity_);
     iterator position_ = begin() + n;
     mm::shiftr_data(position_, (end() - position_));
-    new (position_) T(std::forward(x));
+    new (position_) T(std::forward<T>(x));
     length++;
     return position_;
 }
 
 template <typename T>
 typename rvector<T>::iterator 
-rvector<T>::insert(rvector<T>::const_iterator position, size_type n, const T& x) // TEST
+rvector<T>::insert(rvector<T>::const_iterator position, size_type n, const T& x)
 {
     size_type m = position - begin();
     if(length + n > capacity_)
@@ -597,7 +600,7 @@ template <typename T>
 template <class InputIterator, typename>
 typename rvector<T>::iterator 
 rvector<T>::insert (rvector<T>::const_iterator position, InputIterator first, 
-                     InputIterator last) // TEST
+                     InputIterator last)
 {
     size_type m = position - begin();
     size_type n = std::distance(first, last);
@@ -635,25 +638,31 @@ rvector<T>::insert(rvector<T>::const_iterator position, std::initializer_list<T>
 
 template <typename T>
 typename rvector<T>::iterator 
-rvector<T>::erase(rvector<T>::const_iterator position) // TEST
+rvector<T>::erase(rvector<T>::const_iterator position)
 {
     position->~T();
-    mm::shiftl_data(position+1, end());
+    size_type n = position - begin();
+    size_type rest = end() - position - 1;
+    mm::shiftl_data(begin() + n + 1, rest);
     length--;
+    return begin() + n;
 }
 
 template <typename T>
 typename rvector<T>::iterator 
-rvector<T>::erase(rvector<T>::const_iterator first, rvector<T>::const_iterator last) // TEST
+rvector<T>::erase(rvector<T>::const_iterator first, rvector<T>::const_iterator last)
 {
     mm::destruct(first, last);
-    size_type n = std::distance(first, last);
-    mm::shiftl_data(last, end(), n);
-    length -= n;
+    size_type n = first - begin();
+    size_type dist = std::distance(first, last);
+    size_type rest = end() - last;
+    mm::shiftl_data(end() - rest, rest, dist);
+    length -= dist;
+    return begin() + n;
 }
 
 template <typename T>
-void rvector<T>::swap(rvector<T>& other) // TEST
+void rvector<T>::swap(rvector<T>& other)
 {
     std::swap(data_, other.data_);
     std::swap(length, other.length);
@@ -673,7 +682,7 @@ bool operator==(const rvector<T>& x, const rvector<T>& y) // TEST
 {
     if(x.size() != y.size()) return false;
     for(size_t i = 0; i < x.size(); i++)
-        if(x[i] != y[i]) return false;
+        if(!(x[i] == y[i])) return false;
     return true;
 }
 
@@ -709,7 +718,7 @@ bool operator<=(const rvector<T>& x,const rvector<T>& y) // TEST
 }
 
 template <class T>
-void swap(rvector<T>& x, rvector<T>& y) // TEST
+void swap(rvector<T>& x, rvector<T>& y)
 {
     x.swap(y);
 }

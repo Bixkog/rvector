@@ -30,13 +30,19 @@ struct TestType
 	TestType& operator = (const TestType& other)
 	{
 		n = other.n;
-		p = new int(*other.p);
+		*p = *other.p;
 		return *this;
 	}
 
 	bool operator == (const TestType& other) const
 	{
 		return n == other.n and *p == *other.p;
+	}
+
+
+	bool operator < (const TestType& other) const
+	{
+		return n < other.n or (n == other.n and *p < *other.p);
 	}
 
 	friend 
