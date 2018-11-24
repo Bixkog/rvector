@@ -1,6 +1,8 @@
 #include <vector>
 #include <chrono>
+#include <random>
 #include <iostream>
+#include <functional>
 #include "rvector.h"
 #include "test_type.h"
 
@@ -33,49 +35,177 @@ void check_mremap()
 	mm::grows = 0;
 }
 
-template<typename F, typename... Args>
-void bench_function(F f, std::string name, int max_size, Args... args)
-{
-	for(int size = 10; size < max_size; size *= 10)
-	{
-		int t = max_size / size / 10;
-		auto timer = BenchTimer(name + "/" + std::to_string(size));
-		while(t-->0) f(size, args...);
+template <template<typename> typename V, typename... Ts>
+class VectorEnv {
+public:
+	VectorEnv(int seed) 
+	: rd{},
+		gen{rd()},
+		env{} {
+		gen.seed(seed);
 	}
-}
 
-template<typename V>
-void push_back_bench(int size, typename V::value_type e)
-{
-	V v;
-	V v2;
-	for(int i = 0; i < size; ++i)
-	{
-		v.push_back(e);
-		v2.push_back(e);
+	void RunSimulation(int iter=1000) {
+		BenchTimer bt("Simulation");
+		while(iter--) {
+			(dispatch_action<Ts>(), ...);
+		}
 	}
-	std::cout << mm::grows << " " << mm::mremap_skips << std::endl;
-	mm::grows = 0;
-	mm::mremap_skips = 0;
-}
+
+private:
+
+	template <typename T>
+	void push_back_action() {
+		auto& typed_env = std::get<V<V<T>>>(env);
+		if(typed_env.size() == 0) {
+			construct_action<T>();
+			return;
+		}
+		std::uniform_int_distribution<> q_dist(1, typed_env.size() / 3 + 1);
+		std::uniform_int_distribution<> pick_dist(0, typed_env.size()-1);
+		std::uniform_int_distribution<> size_dist(1, 100000);
+
+		int q = q_dist(gen);
+		while(q--) {
+			int pick = pick_dist(gen);
+			int size = size_dist(gen);
+			while(size--)
+				typed_env[pick].emplace_back();
+		}
+	}
+
+	template <typename T>
+	void pop_back_action() {
+		auto& typed_env = std::get<V<V<T>>>(env);
+		if(typed_env.size() == 0) {
+			construct_action<T>();
+			return;
+		}
+		std::uniform_int_distribution<> q_dist(1, typed_env.size() / 3 + 1);
+		std::uniform_int_distribution<> pick_dist(0, typed_env.size()-1);
+		
+
+		int q = q_dist(gen);
+		while(q--) {
+			int pick = pick_dist(gen);
+			std::uniform_int_distribution<> size_dist(0, typed_env[pick].size());
+			int size = size_dist(gen);
+			while(size--)
+				typed_env[pick].pop_back();
+		}
+	}
+
+	template <typename T>
+	void construct_action() {
+		auto& typed_env = std::get<V<V<T>>>(env);
+		std::uniform_int_distribution<> q_dist(1, 3);
+		std::uniform_int_distribution<> size_dist(1, 10000);
+
+		int q = q_dist(gen);
+		while(q--) {
+			int size = size_dist(gen);
+			typed_env.emplace_back();
+			while(size--)
+				typed_env.back().emplace_back();
+		}
+	}
+
+	template <typename T>
+	void copy_action() {
+		auto& typed_env = std::get<V<V<T>>>(env);
+		if(typed_env.size() == 0) {
+			construct_action<T>();
+			return;
+		}
+		std::uniform_int_distribution<> q_dist(1, 3);
+		std::uniform_int_distribution<> pick_dist(0, typed_env.size()-1);
+
+		int q = q_dist(gen);
+		while(q--) {
+			int pick = pick_dist(gen);
+			typed_env.emplace_back(typed_env[pick].begin(), typed_env[pick].end());
+		}
+	}
+
+	template <typename T>
+	void insert_action() {
+		auto& typed_env = std::get<V<V<T>>>(env);
+		if(typed_env.size() == 0) {
+			construct_action<T>();
+			return;
+		}
+		std::uniform_int_distribution<> q_dist(1, typed_env.size() / 3 + 1);
+		std::uniform_int_distribution<> pick_dist(0, typed_env.size() - 1);
+		std::uniform_int_distribution<> size_dist(1, 10000);
+
+		int q = q_dist(gen);
+		while(q--) {
+			int pick = pick_dist(gen);
+			int size = size_dist(gen);
+
+			if(typed_env[pick].size() == 0) {
+				typed_env[pick].insert(typed_env[pick].begin(), size, T());
+				continue;
+			}
+
+			std::uniform_int_distribution<> pos_dist(0, typed_env[pick].size()-1);
+			auto pos = typed_env[pick].begin() + pos_dist(gen);
+			typed_env[pick].insert(pos, size, T());
+		}
+	}
+
+	template <typename T>
+	void erase_action() {
+		auto& typed_env = std::get<V<V<T>>>(env);
+		if(typed_env.size() == 0) {
+			construct_action<T>();
+			return;
+		}
+		std::uniform_int_distribution<> q_dist(1, typed_env.size() / 3 + 1);
+		std::uniform_int_distribution<> pick_dist(0, typed_env.size()-1);
+
+		int q = q_dist(gen);
+		while(q--) {
+			int pick = pick_dist(gen);
+			if(typed_env[pick].size() == 0) continue;
+			std::uniform_int_distribution<> pos_dist(0, typed_env[pick].size()-1);
+			auto pos = typed_env[pick].begin() + pos_dist(gen);
+			std::uniform_int_distribution<> size_dist(0, std::distance(pos, typed_env[pick].end()) - 1);
+			int size = size_dist(gen);
+			typed_env[pick].erase(pos, pos + size);
+		}
+	}
+
+	constexpr static int actions_num = 6;
+	template<typename T>
+	void dispatch_action() {
+		std::uniform_int_distribution<> action_dist(1, actions_num);
+		switch(action_dist(gen)) {
+			case 1: push_back_action<T>(); break;
+			case 2: pop_back_action<T>(); break;
+			case 3: construct_action<T>(); break;
+			case 4: copy_action<T>(); break;
+			case 5: insert_action<T>(); break;
+			case 6: erase_action<T>(); break;
+			default:
+				std::cout << "ADD ACTION" << std::endl;
+		}
+	}
+
+	std::random_device rd;
+	std::mt19937 gen;
+	std::tuple<V<V<Ts>>...> env;
+	int seed;
+};
 
 
 int main()
 {
-	// bench_function(push_back_bench<std::vector<int>>, 
-	// 				"std::vector_TestType_push_back", 10e7, 
-	// 				0);
-	// bench_function(push_back_bench<rvector<int>>, 
-	// 				"rvector_TestType_push_back", 10e7, 
-	// 				0);
-	push_back_bench<rvector<TestType>>(10e7, {});
-	// check_mremap();
-	// bench_function(push_back_bench<std::vector<std::string>>, 
-	// 				"std::vector_string_push_back", 10e7, 
-	// 				"testtesttesttesttesttesttest");
-	// bench_function(push_back_bench<rvector<std::string>>, 
-	// 				"rvector_string_push_back", 10e7, 
-	// 				"testtesttesttesttesttesttest");
-	// check_mremap();
-
+	int seed = 100;
+	int iter = 1000;
+	VectorEnv<rvector, int> rvectorEnv(seed);
+	VectorEnv<std::vector, int> std_vectorEnv(seed);
+	rvectorEnv.RunSimulation(iter);
+	std_vectorEnv.RunSimulation(iter);
+	check_mremap();
 }

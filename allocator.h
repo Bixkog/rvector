@@ -135,38 +135,38 @@ namespace mm
 	    }
 	    else
 	    {
+			grows++;
 	        if(capacity > map_threshold<T>)
             {
             	// std::cout << "mremap\n";
-            	// grows++;
             	auto p = (T*) mremap(data, capacity*sizeof(T), 
                         n*sizeof(T), MREMAP_MAYMOVE);
-            	// if(p == data) std::cout << "NOT MOVED\n"; 
-	        	// {
-	        	// 	mremap_skips++;
-	        	// 	std::cout << p << " = " << data 
-	        	// 			<< " size: " << n*sizeof(T) <<std::endl;
-	        	// }
-	        	// else 
-	        	// {
-	        	// 	std::cout << p << " != " << data << std::endl;
-	        	// }
+            	if(p == data)
+	        	{
+        		 // 	std::cout << "TRIVIAL NOT MOVED\n";
+	        		mremap_skips++;
+	        		// std::cout << p << " = " << data 
+	        		// 		<< " size: " << n*sizeof(T) << std::endl;
+	        	}
+	        	else 
+	        	{
+	        		// std::cout << p << " != " << data << std::endl;
+	        	}
 	        	return p;
             }
 	        else
 	        {
-            	// std::cout << "realloc: ";
-				// grows++;
+    //         	std::cout << "realloc: ";
 	        	auto p = (T*) realloc(data, n*sizeof(T));
-	        	// if(p == data)
-	        	// {
-          //   		mremap_skips++;
+	        	if(p == data)
+	        	{
+            		mremap_skips++;
           //   		std::cout << p << " = " << data 
           //   				<< " size: " << n*sizeof(T) <<std::endl;
-	        	// }
-	        	// else {
+	        	}
+	        	else {
           //   		std::cout << p << " != " << data << std::endl;
-	        	// }
+	        	}
 	        	return p;
 	        }
 	    }
@@ -178,6 +178,7 @@ namespace mm
 							size_type capacity, 
 							size_type n)
 	{
+		grows++;
         if(capacity > map_threshold<T>)
         {
         	// std::cout << "mremap nontrivial ";
@@ -187,7 +188,8 @@ namespace mm
             // std::cout << " " << new_data;
             if(new_data != (void*)-1)
             {
-            	// std::cout << " not moved\n";
+            	mremap_skips++;
+            	// std::cout << "NON TRIVIAL NOT MOVED\n";
             	return (T*) new_data;
             }
             // std::cout << std::endl;
