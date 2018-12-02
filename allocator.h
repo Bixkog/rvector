@@ -142,16 +142,16 @@ namespace mm
             	auto p = (T*) mremap(data, capacity*sizeof(T), 
                         n*sizeof(T), MREMAP_MAYMOVE);
             	if(p == data)
-	        	{
-        		 // 	std::cout << "TRIVIAL NOT MOVED\n";
+	        	// {
+        		//  // 	std::cout << "TRIVIAL NOT MOVED\n";
 	        		mremap_skips++;
-	        		// std::cout << p << " = " << data 
-	        		// 		<< " size: " << n*sizeof(T) << std::endl;
-	        	}
-	        	else 
-	        	{
-	        		// std::cout << p << " != " << data << std::endl;
-	        	}
+	        	// 	// std::cout << p << " = " << data 
+	        	// 	// 		<< " size: " << n*sizeof(T) << std::endl;
+	        	// }
+	        	// else 
+	        	// {
+	        	// 	// std::cout << p << " != " << data << std::endl;
+	        	// }
 	        	return p;
             }
 	        else
@@ -159,14 +159,14 @@ namespace mm
     //         	std::cout << "realloc: ";
 	        	auto p = (T*) realloc(data, n*sizeof(T));
 	        	if(p == data)
-	        	{
+	        	// {
             		mremap_skips++;
-          //   		std::cout << p << " = " << data 
-          //   				<< " size: " << n*sizeof(T) <<std::endl;
-	        	}
-	        	else {
-          //   		std::cout << p << " != " << data << std::endl;
-	        	}
+          // //   		std::cout << p << " = " << data 
+          // //   				<< " size: " << n*sizeof(T) <<std::endl;
+	        	// }
+	        	// else {
+          // //   		std::cout << p << " != " << data << std::endl;
+	        	// }
 	        	return p;
 	        }
 	    }
