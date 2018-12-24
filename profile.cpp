@@ -4,8 +4,30 @@
 #include <iostream>
 #include <functional>
 #include <map>
+#include <math.h>
+#include <fstream>
 #include "rvector.h"
 #include "test_type.h"
+#include <folly/FBVector.h>
+
+template<typename T, typename F>
+auto map(F f, std::vector<T> const& v) -> decltype(auto) {
+	std::vector<decltype(f(std::declval<T>()))> res;
+	res.reserve(v.size());
+	for(auto const& e : v) res.emplace_back(f(e));
+	return res; 
+}
+
+template<typename... Ts>
+auto zip(std::vector<Ts> const&... Vs) -> decltype(auto) {
+	auto min_size = std::min({Vs.size()...});
+	std::vector<std::tuple<Ts...>> res;
+	res.reserve(min_size);
+	for(size_t i = 0; i < min_size; ++i) {
+		res.emplace_back(Vs[i]...);
+	}
+	return res;
+}
 
 class BenchTimer
 {
@@ -33,8 +55,11 @@ public:
 
 	static
 	void clear() {
-		durations.clear();
+		data.emplace_back(std::move(durations));
+		durations = std::map<std::string, double>();
 	}
+
+	static std::vector<std::map<std::string, double>> data;
 
 private:
 	std::string name;
@@ -43,6 +68,7 @@ private:
 };
 
 std::map<std::string, double> BenchTimer::durations = {};
+std::vector<std::map<std::string, double>> BenchTimer::data = {};
 
 void check_mremap()
 {
@@ -121,7 +147,7 @@ private:
 
 		auto& typed_env = std::get<V<V<T>>>(env);
 		std::uniform_int_distribution<> q_dist(1, 3);
-		std::uniform_int_distribution<> size_dist(1, 10000);
+		std::uniform_int_distribution<> size_dist(1, 1000);
 
 		int q = q_dist(gen);
 		while(q--) {
@@ -242,22 +268,76 @@ void test_type(std::string name, int max_it = 500) {
 	BenchTimer::clear();
 }
 
+template <template<typename> typename V, typename... Ts>
+void experiment(std::string name, int max_it = 500, int tests = 5) {
+	std::vector<int> it_count;
+	std::vector<double> means;
+	std::vector<double> variances;
+	for(int iter = 100; iter <= max_it; iter += 100) {
+		double avg = 0.;
+		std::vector<double> test_res;
+		for(int seed = 12345512; seed < 12345512 + tests; seed++) {
+			VectorEnv<V, Ts...> v_env(seed);
+			test_res.push_back(v_env.RunSimulation(iter));
+			avg += test_res.back();
+		}
+		avg /= tests;
+		BenchTimer::clear();
+		means.push_back(avg);
+		it_count.push_back(iter);
+		double var = 0.;
+		for(double res : test_res) var += (avg - res) * (avg - res);
+		variances.push_back(std::sqrt(var / tests));
+		std::cout << name << ": " 
+					<< iter << " iter, "
+					<< avg / tests << "s mean, " 
+					<< variances.back() << "s stddev" << std::endl;
+	}
+
+	auto& data = BenchTimer::data;
+	if(data.empty()) return;
+
+	std::ofstream out(name + ".csv");
+
+	out << "iterations,mean,variance,";
+	for(auto const& [k, v] : data[0]) {
+		(void) v;
+		out << k << ",";
+	}
+	out << std::endl;
+
+	for(auto const& [it, mean, var, row] : zip(it_count, means, variances, data)) {
+		out << it << "," << mean << "," << var;
+		for([[maybe_unused]] auto const& [k, v] : row) {
+			(void) k;
+			out << "," << v;
+		}
+		out << std::endl;
+	}
+}
+
+
 
 int main()
 {
-	test_type<rvector, int>("rvector<int>");
-	check_mremap();
-	test_type<std::vector, int>("std::vector<int>");
+	// experiment<rvector, int>("rvector<int>", 1000);
+	// experiment<std::vector, int>("std::vector<int>", 1000);
+	// experiment<folly::fbvector, int>("folly::fbvector<int>", 1000);
 	
-	test_type<rvector, TestType>("rvector<TestType>");
-	check_mremap();
-	test_type<std::vector, TestType>("std::vector<TestType>");
+	// experiment<rvector, TestType>("rvector<TestType>");
+	// experiment<std::vector, TestType>("std::vector<TestType>");
+	// experiment<folly::fbvector, TestType>("folly::fbvector<TestType>");
 	
-	test_type<rvector, std::array<int, 10>>("rvector<std::array<int, 10>>", 500);
-	check_mremap();
-	test_type<std::vector, std::array<int, 10>>("std::vector<std::array<int, 10>>", 500);
+	// experiment<rvector, std::array<int, 10>>("rvector<std::array<int,10>>");
+	// experiment<std::vector, std::array<int, 10>>("std::vector<std::array<int,10>>");
+	// experiment<folly::fbvector,  std::array<int, 10>>("folly::fbvector< std::array<int,10>>");
 	
-	test_type<rvector, std::string, int, std::array<int, 10>>("rvector<std::string, int, std::array<int, 10>>", 500);
-	check_mremap();
-	test_type<std::vector, std::string, int, std::array<int, 10>>("std::vector<std::string, int, std::array<int, 10>>", 500);
+	experiment<rvector, std::string, int, std::array<int, 10>>("rvector<std::string, int, std::array<int,10>>");
+	// experiment<std::vector, std::string, int, std::array<int, 10>>("std::vector<std::string, int, std::array<int,10>>");
+	experiment<folly::fbvector, std::string, int, std::array<int, 10>>("folly::fbvector<std::string, int, std::array<int,10>>");
+	// test_type<rvector, std::string, int, std::array<int, 10>>("rvector<std::string, int, std::array<int,10>>");
+
+	// test_type<folly::fbvector, std::string, int, std::array<int, 10>>("folly::fbvector<std::string, int, std::array<int,10>>");
+
+
 }

@@ -319,8 +319,8 @@ TYPED_TEST(rvector_test, push_pop_emplace)
 		v.push_back(init_value<TypeParam>(i));
 
 	EXPECT_EQ(v.size(), 127u*2u);
-	EXPECT_GE(v.max_size(), 127u*2u);
-	EXPECT_LE(v.max_size(), 127u*4u);
+	EXPECT_GE(v.capacity(), 127u*2u);
+	EXPECT_LE(v.capacity(), 127u*5u);
 	for(size_t i = 0; i < 127u*2u; ++i)
 		EXPECT_EQ(v[i], init_value<TypeParam>(i));
 
@@ -335,8 +335,8 @@ TYPED_TEST(rvector_test, push_pop_emplace)
 	for(size_t i = 0; i < 127u*2u; ++i)
 		EXPECT_EQ(v[i], init_value<TypeParam>(i));
 	EXPECT_EQ(v.size(), 127u*2u);
-	EXPECT_GE(v.max_size(), 127u*2u);
-	EXPECT_LE(v.max_size(), 127u*4u);
+	EXPECT_GE(v.capacity(), 127u*2u);
+	EXPECT_LE(v.capacity(), 127u*5u);
 }
 
 TYPED_TEST(rvector_test, emplace_position)
@@ -576,4 +576,13 @@ TYPED_TEST(rvector_test, ordering_relation)
 	EXPECT_TRUE(v1 < v2 and v2 < v3 and v1 < v3);
 	EXPECT_TRUE(v1 <= v2 and v2 <= v3 and v1 <= v3);
 	EXPECT_TRUE(v3 >= v1 and v3 >= v2 and v2 >= v1);
+}
+
+TEST(rvector_test, guides_test) 
+{
+	rvector v1 = {1, 2, 3};
+	rvector v2(10, 3.);
+	rvector v3(v2.begin(), v2.end());
+	rvector v4(v3);
+	rvector v5(std::move(v4));
 }

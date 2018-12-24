@@ -68,7 +68,6 @@ namespace mm
 	        free(p);
 	}
 
-
 // destruct
 	template<typename T>
 	NT_Destr<T>
@@ -83,12 +82,11 @@ namespace mm
 	{
 	}
 
-
 // fill
 	template<typename T>
 	T_Copy<T> fill(T* data, size_type n, const T& value = T())
 	{
-		std::fill_n(data, n, value);
+		std::uninitialized_fill_n(data, n, value);
 	}
 
 	template<typename T>
@@ -100,7 +98,7 @@ namespace mm
 	template<typename T, typename InputIterator>
 	T_Copy<T> fill(T* data, InputIterator begin, InputIterator end)
 	{
-		std::uninitialized_copy(begin, end, data);
+		memcpy(data, &*begin, (end - begin) * sizeof(T)); 
 	}
 
 	template<typename T, typename InputIterator>
@@ -110,10 +108,10 @@ namespace mm
 	}
 
 // fix_capacity
-
 	template <typename T>
 	size_type fix_capacity(size_type n)
 	{
+		n = std::max(64/sizeof(T), n);
 		if(n < map_threshold<T>)
 	        return n;
 	    return map_threshold<T> * (n/map_threshold<T> + 1);
@@ -135,16 +133,16 @@ namespace mm
 	    }
 	    else
 	    {
-			grows++;
+			// grows++;
 	        if(capacity > map_threshold<T>)
             {
             	// std::cout << "mremap\n";
             	auto p = (T*) mremap(data, capacity*sizeof(T), 
                         n*sizeof(T), MREMAP_MAYMOVE);
-            	if(p == data)
+            	// if(p == data)
 	        	// {
         		//  // 	std::cout << "TRIVIAL NOT MOVED\n";
-	        		mremap_skips++;
+	        		// mremap_skips++;
 	        	// 	// std::cout << p << " = " << data 
 	        	// 	// 		<< " size: " << n*sizeof(T) << std::endl;
 	        	// }
@@ -158,9 +156,9 @@ namespace mm
 	        {
     //         	std::cout << "realloc: ";
 	        	auto p = (T*) realloc(data, n*sizeof(T));
-	        	if(p == data)
+	        	// if(p == data)
 	        	// {
-            		mremap_skips++;
+            		// mremap_skips++;
           // //   		std::cout << p << " = " << data 
           // //   				<< " size: " << n*sizeof(T) <<std::endl;
 	        	// }
@@ -178,7 +176,7 @@ namespace mm
 							size_type capacity, 
 							size_type n)
 	{
-		grows++;
+		// grows++;
         if(capacity > map_threshold<T>)
         {
         	// std::cout << "mremap nontrivial ";
@@ -188,7 +186,7 @@ namespace mm
             // std::cout << " " << new_data;
             if(new_data != (void*)-1)
             {
-            	mremap_skips++;
+            	// mremap_skips++;
             	// std::cout << "NON TRIVIAL NOT MOVED\n";
             	return (T*) new_data;
             }
@@ -246,28 +244,6 @@ namespace mm
 			new (end_p) T(std::move(*(end_p - n)));
 			(end_p - n)->~T();
 			end_p--;
-		}
-	}
-
-// shiftl
-	template<typename T>
-	T_Move_a<T> 
-	shiftl_data(T* begin, size_type end, size_t n = 1)
-	{
-		memmove(begin - n, begin, end * sizeof(T));
-	}
-
-	template<typename T>
-	NT_Move_a<T> 
-	shiftl_data(T* begin, size_type end, size_t n = 1)
-	{
-		auto end_p = begin + end - n;
-		auto begin_p = begin - n;
-		while(end_p != begin_p)
-		{
-			new (begin_p) T(std::move(*(begin_p + n)));
-			(begin_p + n)->~T();
-			begin_p++;
 		}
 	}
 } // namespace mm
