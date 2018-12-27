@@ -269,7 +269,7 @@ void test_type(std::string name, int max_it = 500) {
 }
 
 template <template<typename> typename V, typename... Ts>
-void experiment(std::string name, int max_it = 500, int tests = 5) {
+void experiment(std::string name, int max_it = 1000, int tests = 10) {
 	std::vector<int> it_count;
 	std::vector<double> means;
 	std::vector<double> variances;
@@ -281,23 +281,26 @@ void experiment(std::string name, int max_it = 500, int tests = 5) {
 			test_res.push_back(v_env.RunSimulation(iter));
 			avg += test_res.back();
 		}
-		avg /= tests;
+		auto extremum = std::max_element(test_res.begin(), test_res.end());
+		test_res.erase(extremum);
+		avg = (avg - *extremum) / (tests - 1);
 		BenchTimer::clear();
 		means.push_back(avg);
 		it_count.push_back(iter);
 		double var = 0.;
 		for(double res : test_res) var += (avg - res) * (avg - res);
-		variances.push_back(std::sqrt(var / tests));
+		variances.push_back(std::sqrt(var / (tests - 1)));
 		std::cout << name << ": " 
 					<< iter << " iter, "
 					<< avg / tests << "s mean, " 
 					<< variances.back() << "s stddev" << std::endl;
 	}
 
-	auto& data = BenchTimer::data;
+	auto data = BenchTimer::data;
 	if(data.empty()) return;
+	BenchTimer::data.clear();
 
-	std::ofstream out(name + ".csv");
+	std::ofstream out("data/" + name + ".csv");
 
 	out << "iterations,mean,variance,";
 	for(auto const& [k, v] : data[0]) {
@@ -320,21 +323,21 @@ void experiment(std::string name, int max_it = 500, int tests = 5) {
 
 int main()
 {
-	// experiment<rvector, int>("rvector<int>", 1000);
-	// experiment<std::vector, int>("std::vector<int>", 1000);
-	// experiment<folly::fbvector, int>("folly::fbvector<int>", 1000);
+	experiment<rvector, int>("rvector<int>", 1000);
+	experiment<std::vector, int>("std::vector<int>", 1000);
+	experiment<folly::fbvector, int>("folly::fbvector<int>", 1000);
 	
-	// experiment<rvector, TestType>("rvector<TestType>");
-	// experiment<std::vector, TestType>("std::vector<TestType>");
-	// experiment<folly::fbvector, TestType>("folly::fbvector<TestType>");
+	experiment<rvector, TestType>("rvector<TestType>");
+	experiment<std::vector, TestType>("std::vector<TestType>");
+	experiment<folly::fbvector, TestType>("folly::fbvector<TestType>");
 	
-	// experiment<rvector, std::array<int, 10>>("rvector<std::array<int,10>>");
-	// experiment<std::vector, std::array<int, 10>>("std::vector<std::array<int,10>>");
-	// experiment<folly::fbvector,  std::array<int, 10>>("folly::fbvector< std::array<int,10>>");
+	experiment<rvector, std::array<int, 10>>("rvector<std::array<int,10>>");
+	experiment<std::vector, std::array<int, 10>>("std::vector<std::array<int,10>>");
+	experiment<folly::fbvector,  std::array<int, 10>>("folly::fbvector<std::array<int,10>>");
 	
-	experiment<rvector, std::string, int, std::array<int, 10>>("rvector<std::string, int, std::array<int,10>>");
-	// experiment<std::vector, std::string, int, std::array<int, 10>>("std::vector<std::string, int, std::array<int,10>>");
-	experiment<folly::fbvector, std::string, int, std::array<int, 10>>("folly::fbvector<std::string, int, std::array<int,10>>");
+	experiment<rvector, std::string, int, std::array<int, 10>>("rvector<std::string, int, std::array<int,10>>", 800);
+	experiment<std::vector, std::string, int, std::array<int, 10>>("std::vector<std::string, int, std::array<int,10>>", 800);
+	experiment<folly::fbvector, std::string, int, std::array<int, 10>>("folly::fbvector<std::string, int, std::array<int,10>>", 800);
 	// test_type<rvector, std::string, int, std::array<int, 10>>("rvector<std::string, int, std::array<int,10>>");
 
 	// test_type<folly::fbvector, std::string, int, std::array<int, 10>>("folly::fbvector<std::string, int, std::array<int,10>>");

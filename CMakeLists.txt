@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 3.5)
 project(rvector)
 set(CMAKE_CXX_FLAGS_DEBUG "-std=c++17 -ggdb -g -Wall -Wextra")
+set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fno-omit-frame-pointer -fsanitize=address")
+set (CMAKE_LINKER_FLAGS_DEBUG "${CMAKE_LINKER_FLAGS_DEBUG} -fno-omit-frame-pointer -fsanitize=address")
 set(CMAKE_CXX_FLAGS_RELEASE "-std=c++17 -O3 -march=native -Wall -Wextra")
 
 # Download and unpack googletest at configure time
