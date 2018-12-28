@@ -84,15 +84,15 @@ namespace mm
 
 // fill
 	template<typename T>
-	T_Copy<T> fill(T* data, size_type n, const T& value = T())
+	T_Copy<T> fill(T* begin, T* end, const T& value = T())
 	{
-		std::uninitialized_fill_n(data, n, value);
+		std::uninitialized_fill(begin, end, value);
 	}
 
 	template<typename T>
-	NT_Copy<T> fill(T* data, size_type n, const T& value = T())
+	NT_Copy<T> fill(T* begin, T* end, const T& value = T())
 	{
-		std::uninitialized_fill_n(data, n, value);
+		std::uninitialized_fill(begin, end, value);
 	}
 
 	template<typename T, typename InputIterator>
@@ -118,111 +118,111 @@ namespace mm
 	}
 
 // realloc
-	template<typename T>
-	T_Copy<T, T*> realloc_(T* data, 
-							size_type length, 
-							size_type capacity, 
-							size_type n)
-	{
-		if((n > map_threshold<T>) != (capacity > map_threshold<T>))
-	    {
-	        T* new_data = allocate<T>(n);
-	        memcpy(new_data, data, length * sizeof(T));
-	        deallocate(data, capacity);
-	        return new_data;
-	    }
-	    else
-	    {
-			// grows++;
-	        if(capacity > map_threshold<T>)
-            {
-            	// std::cout << "mremap\n";
-            	auto p = (T*) mremap(data, capacity*sizeof(T), 
-                        n*sizeof(T), MREMAP_MAYMOVE);
-            	// if(p == data)
-	        	// {
-        		//  // 	std::cout << "TRIVIAL NOT MOVED\n";
-	        		// mremap_skips++;
-	        	// 	// std::cout << p << " = " << data 
-	        	// 	// 		<< " size: " << n*sizeof(T) << std::endl;
-	        	// }
-	        	// else 
-	        	// {
-	        	// 	// std::cout << p << " != " << data << std::endl;
-	        	// }
-	        	return p;
-            }
-	        else
-	        {
-    //         	std::cout << "realloc: ";
-	        	auto p = (T*) realloc(data, n*sizeof(T));
-	        	// if(p == data)
-	        	// {
-            		// mremap_skips++;
-          // //   		std::cout << p << " = " << data 
-          // //   				<< " size: " << n*sizeof(T) <<std::endl;
-	        	// }
-	        	// else {
-          // //   		std::cout << p << " != " << data << std::endl;
-	        	// }
-	        	return p;
-	        }
-	    }
-	}
+// 	template<typename T>
+// 	T_Copy<T, T*> realloc_(T* data, 
+// 							size_type length, 
+// 							size_type capacity, 
+// 							size_type n)
+// 	{
+// 		if((n > map_threshold<T>) != (capacity > map_threshold<T>))
+// 	    {
+// 	        T* new_data = allocate<T>(n);
+// 	        memcpy(new_data, data, length * sizeof(T));
+// 	        deallocate(data, capacity);
+// 	        return new_data;
+// 	    }
+// 	    else
+// 	    {
+// 			// grows++;
+// 	        if(capacity > map_threshold<T>)
+//             {
+//             	// std::cout << "mremap\n";
+//             	auto p = (T*) mremap(data, capacity*sizeof(T), 
+//                         n*sizeof(T), MREMAP_MAYMOVE);
+//             	// if(p == data)
+// 	        	// {
+//         		//  // 	std::cout << "TRIVIAL NOT MOVED\n";
+// 	        		// mremap_skips++;
+// 	        	// 	// std::cout << p << " = " << data 
+// 	        	// 	// 		<< " size: " << n*sizeof(T) << std::endl;
+// 	        	// }
+// 	        	// else 
+// 	        	// {
+// 	        	// 	// std::cout << p << " != " << data << std::endl;
+// 	        	// }
+// 	        	return p;
+//             }
+// 	        else
+// 	        {
+//     //         	std::cout << "realloc: ";
+// 	        	auto p = (T*) realloc(data, n*sizeof(T));
+// 	        	// if(p == data)
+// 	        	// {
+//             		// mremap_skips++;
+//           // //   		std::cout << p << " = " << data 
+//           // //   				<< " size: " << n*sizeof(T) <<std::endl;
+// 	        	// }
+// 	        	// else {
+//           // //   		std::cout << p << " != " << data << std::endl;
+// 	        	// }
+// 	        	return p;
+// 	        }
+// 	    }
+// 	}
 
-	template<typename T>
-	NT_Copy<T, T*> realloc_(T* data, 
-							size_type length, 
-							size_type capacity, 
-							size_type n)
-	{
-		// grows++;
-        if(capacity > map_threshold<T>)
-        {
-        	// std::cout << "mremap nontrivial ";
-        	// std::cout << data;
-            void* new_data = mremap(data, capacity*sizeof(T), 
-                        		n*sizeof(T), 0);
-            // std::cout << " " << new_data;
-            if(new_data != (void*)-1)
-            {
-            	// mremap_skips++;
-            	// std::cout << "NON TRIVIAL NOT MOVED\n";
-            	return (T*) new_data;
-            }
-            // std::cout << std::endl;
-        }
-	    T* new_data = allocate<T>(n);
-	    std::uninitialized_move_n(data, length, new_data);
-	    destruct(data, data + length);
-	    deallocate(data, capacity);
-	    return new_data;
-	}
+// 	template<typename T>
+// 	NT_Copy<T, T*> realloc_(T* data, 
+// 							size_type length, 
+// 							size_type capacity, 
+// 							size_type n)
+// 	{
+// 		// grows++;
+//         if(capacity > map_threshold<T>)
+//         {
+//         	// std::cout << "mremap nontrivial ";
+//         	// std::cout << data;
+//             void* new_data = mremap(data, capacity*sizeof(T), 
+//                         		n*sizeof(T), 0);
+//             // std::cout << " " << new_data;
+//             if(new_data != (void*)-1)
+//             {
+//             	// mremap_skips++;
+//             	// std::cout << "NON TRIVIAL NOT MOVED\n";
+//             	return (T*) new_data;
+//             }
+//             // std::cout << std::endl;
+//         }
+// 	    T* new_data = allocate<T>(n);
+// 	    std::uninitialized_move_n(data, length, new_data);
+// 	    destruct(data, data + length);
+// 	    deallocate(data, capacity);
+// 	    return new_data;
+// 	}
 
-// change_capacity
-	template<typename T>
-	void change_capacity(T*& data, 
-						size_type length, 
-						size_type& capacity, 
-						size_type n)
-	{
-		size_type new_capacity = fix_capacity<T>(n);
-		if(new_capacity < map_threshold<T> and capacity > map_threshold<T>)
-			return;
-	    if(data)
-	        data = realloc_(data, length, capacity, new_capacity);
-	    else
-	        data = allocate<T>(new_capacity);
-	    capacity = new_capacity;
-	}
+// // change_capacity
+// 	template<typename T>
+// 	void change_capacity(T*& data, 
+// 						size_type length, 
+// 						size_type& capacity, 
+// 						size_type n)
+// 	{
+// 		size_type new_capacity = fix_capacity<T>(n);
+// 		if(new_capacity < map_threshold<T> and capacity > map_threshold<T>)
+// 			return;
+// 	    if(data)
+// 	        data = realloc_(data, length, capacity, new_capacity);
+// 	    else
+// 	        data = allocate<T>(new_capacity);
+// 	    capacity = new_capacity;
+// 	}
 
-// grow
-	template<typename T>
-	void grow(T*& data, size_type length, size_type& capacity)
-	{
-		if(length < capacity) return;
-		change_capacity(data, length, capacity, capacity*2 + 1);
-	}
+// // grow
+// 	template<typename T>
+// 	void grow(T*& data, size_type length, size_type& capacity)
+// 	{
+// 		if(length < capacity) return;
+// 		change_capacity(data, length, capacity, capacity*2 + 1);
+// 	}
 
 // TODO: check if policies are sufficient
 // shiftr data
