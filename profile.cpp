@@ -9,6 +9,8 @@
 #include "rvector.h"
 #include "test_type.h"
 #include <folly/FBVector.h>
+#include <boost/container/vector.hpp>
+#include <boost/container/stable_vector.hpp>
 
 template<typename T, typename F>
 auto map(F f, std::vector<T> const& v) -> decltype(auto) {
@@ -323,22 +325,27 @@ void experiment(std::string name, int max_it = 1000, int tests = 10) {
 
 int main()
 {
-	experiment<rvector, int>("rvector<int>", 1000);
-	experiment<std::vector, int>("std::vector<int>", 1000);
-	experiment<folly::fbvector, int>("folly::fbvector<int>", 1000);
+	// experiment<rvector, int>("rvector<int>", 1000);
+	// experiment<std::vector, int>("std::vector<int>", 1000);
+	// experiment<folly::fbvector, int>("folly::fbvector<int>", 1000);
+	// experiment<boost::container::vector, int>("boost::container::vector<int>", 1000);
 	
-	experiment<rvector, TestType>("rvector<TestType>");
-	experiment<std::vector, TestType>("std::vector<TestType>");
-	experiment<folly::fbvector, TestType>("folly::fbvector<TestType>");
+	// experiment<rvector, TestType>("rvector<TestType>");
+	// experiment<std::vector, TestType>("std::vector<TestType>");
+	// experiment<folly::fbvector, TestType>("folly::fbvector<TestType>");
+	// experiment<boost::container::vector, TestType>("boost::container::vector<TestType>");
 	
-	experiment<rvector, std::array<int, 10>>("rvector<std::array<int,10>>");
-	experiment<std::vector, std::array<int, 10>>("std::vector<std::array<int,10>>");
-	experiment<folly::fbvector,  std::array<int, 10>>("folly::fbvector<std::array<int,10>>");
+	// experiment<rvector, std::array<int, 10>>("rvector<std::array<int,10>>");
+	// experiment<std::vector, std::array<int, 10>>("std::vector<std::array<int,10>>");
+	// experiment<folly::fbvector,  std::array<int, 10>>("folly::fbvector<std::array<int,10>>");
+	// experiment<boost::container::vector,  std::array<int, 10>>("boost::container::vector<std::array<int,10>>");
 	
-	experiment<rvector, std::string, int, std::array<int, 10>>("rvector<std::string, int, std::array<int,10>>", 800);
-	experiment<std::vector, std::string, int, std::array<int, 10>>("std::vector<std::string, int, std::array<int,10>>", 800);
-	experiment<folly::fbvector, std::string, int, std::array<int, 10>>("folly::fbvector<std::string, int, std::array<int,10>>", 800);
-	// test_type<rvector, std::string, int, std::array<int, 10>>("rvector<std::string, int, std::array<int,10>>");
+	// experiment<rvector, std::string, int, std::array<int, 10>>("rvector<std::string, int, std::array<int,10>>", 800);
+	// experiment<std::vector, std::string, int, std::array<int, 10>>("std::vector<std::string, int, std::array<int,10>>", 800);
+	// experiment<folly::fbvector, std::string, int, std::array<int, 10>>("folly::fbvector<std::string, int, std::array<int,10>>", 800);
+	// experiment<boost::container::vector, std::string, int, std::array<int, 10>>("boost::container::vector<std::string, int, std::array<int,10>>", 800);
+	test_type<rvector, std::string, int, std::array<int, 10>>("rvector<std::string, int, std::array<int,10>>");
+	test_type<std::vector, std::string, int, std::array<int, 10>>("std::vector<std::string, int, std::array<int,10>>");
 
 	// test_type<folly::fbvector, std::string, int, std::array<int, 10>>("folly::fbvector<std::string, int, std::array<int,10>>");
 

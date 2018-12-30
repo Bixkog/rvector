@@ -5,7 +5,8 @@
 #include <linux/mman.h>
 #include <iostream>
 
-
+#define LIKELY(x)       __builtin_expect((x),1)
+#define UNLIKELY(x)     __builtin_expect((x),0)
 
 namespace mm
 {
@@ -25,10 +26,10 @@ namespace mm
 	template<typename T, typename R = void>
 	using NT_Copy = std::enable_if_t<!std::is_trivially_copy_constructible<T>::value, R>;
 
-	template<typename T>
-	using T_Move = std::enable_if_t<std::is_trivially_move_constructible<T>::value>;
-	template<typename T>
-	using NT_Move = std::enable_if_t<!std::is_trivially_move_constructible<T>::value>;
+	template<typename T, typename R = void>
+	using T_Move = std::enable_if_t<std::is_trivially_move_constructible<T>::value, R>;
+	template<typename T, typename R = void>
+	using NT_Move = std::enable_if_t<!std::is_trivially_move_constructible<T>::value, R>;
 
 	template<typename T>
 	using T_Move_a = std::enable_if_t<std::is_trivially_move_assignable<T>::value>;
@@ -43,20 +44,12 @@ namespace mm
 	T* allocate(size_type n)
 	{
 		if(n > map_threshold<T>)
-	    {
-	    	auto p = (T*) mmap(NULL, n*sizeof(T), 
+	    	return (T*) mmap(NULL, n*sizeof(T), 
 	                PROT_READ | PROT_WRITE,
 	                MAP_PRIVATE | MAP_ANONYMOUS,
 	                -1, 0);
-	    	// std::cout << "mmap: " << p << std::endl;
-	    	return p;
-	    }
 	    else
-        {
-        	auto p = (T*) malloc(n*sizeof(T));
-        	// std::cout << "malloc: " << p << std::endl;
-        	return p;
-        }
+        	return (T*) malloc(n*sizeof(T));
 	}
 
 	template<typename T>
@@ -119,7 +112,7 @@ namespace mm
 
 // realloc
 	template<typename T>
-	T_Copy<T, T*> realloc_(T* data, 
+	T_Move<T, T*> realloc_(T* data, 
 							size_type length, 
 							size_type capacity, 
 							size_type n)
@@ -133,64 +126,26 @@ namespace mm
 	    }
 	    else
 	    {
-			// grows++;
 	        if(capacity > map_threshold<T>)
-            {
-            	// std::cout << "mremap\n";
-            	auto p = (T*) mremap(data, capacity*sizeof(T), 
-                        n*sizeof(T), MREMAP_MAYMOVE);
-            	// if(p == data)
-	        	// {
-        		//  // 	std::cout << "TRIVIAL NOT MOVED\n";
-	        		// mremap_skips++;
-	        	// 	// std::cout << p << " = " << data 
-	        	// 	// 		<< " size: " << n*sizeof(T) << std::endl;
-	        	// }
-	        	// else 
-	        	// {
-	        	// 	// std::cout << p << " != " << data << std::endl;
-	        	// }
-	        	return p;
-            }
+            	return (T*) mremap(data, capacity*sizeof(T), 
+                        		n*sizeof(T), MREMAP_MAYMOVE);
 	        else
-	        {
-    //         	std::cout << "realloc: ";
-	        	auto p = (T*) realloc(data, n*sizeof(T));
-	        	// if(p == data)
-	        	// {
-            		// mremap_skips++;
-          // //   		std::cout << p << " = " << data 
-          // //   				<< " size: " << n*sizeof(T) <<std::endl;
-	        	// }
-	        	// else {
-          // //   		std::cout << p << " != " << data << std::endl;
-	        	// }
-	        	return p;
-	        }
+	        	return (T*) realloc(data, n*sizeof(T));
 	    }
 	}
 
 	template<typename T>
-	NT_Copy<T, T*> realloc_(T* data, 
+	NT_Move<T, T*> realloc_(T* data, 
 							size_type length, 
 							size_type capacity, 
 							size_type n)
 	{
-		// grows++;
         if(capacity > map_threshold<T>)
         {
-        	// std::cout << "mremap nontrivial ";
-        	// std::cout << data;
             void* new_data = mremap(data, capacity*sizeof(T), 
                         		n*sizeof(T), 0);
-            // std::cout << " " << new_data;
             if(new_data != (void*)-1)
-            {
-            	// mremap_skips++;
-            	// std::cout << "NON TRIVIAL NOT MOVED\n";
             	return (T*) new_data;
-            }
-            // std::cout << std::endl;
         }
 	    T* new_data = allocate<T>(n);
 	    std::uninitialized_move_n(data, length, new_data);
@@ -220,7 +175,7 @@ namespace mm
 	template<typename T>
 	void grow(T*& data, size_type length, size_type& capacity)
 	{
-		if(length < capacity) return;
+		if(LIKELY(length < capacity)) return;
 		change_capacity(data, length, capacity, capacity*2 + 1);
 	}
 
@@ -228,22 +183,18 @@ namespace mm
 // shiftr data
 	template<typename T>
 	T_Move_a<T> 
-	shiftr_data(T* begin, size_type end, size_t n = 1)
+	shiftr_data(T* begin, size_type end)
 	{
-		memmove(begin + n, begin, end * sizeof(T));
+		memmove(begin + 1, begin, end * sizeof(T));
 	}
 
 	template<typename T>
 	NT_Move_a<T> 
-	shiftr_data(T* begin, size_type end, size_t n = 1)
+	shiftr_data(T* begin, size_type end)
 	{
-		auto end_p = begin + end + n - 1;
-		auto begin_p = begin + n - 1;
-		while(end_p != begin_p)
-		{
-			new (end_p) T(std::move(*(end_p - n)));
-			(end_p - n)->~T();
-			end_p--;
-		}
+		auto end_p = begin + end;
+		new (end_p) T(std::move(*(end_p - 1)));
+		std::move_backward(begin, end_p - 1, end_p);
+		begin->~T();
 	}
 } // namespace mm

@@ -13,8 +13,8 @@
 % polecenia \fmlinebreak.
 \polishtitle    {Szybszy std::vector.}
 \englishtitle   {Faster std::vector.}
-\polishabstract {W języku C++ jedną z najczęściej używanych struktur danych jest wektor, który jest rozwinięciem tablic dynamicznych stosowanych w C. Oprócz automatycznego zarządzania pamięcią, pozwala on na dynamiczne zwiększanie rozmiaru trzymanej tablicy, realokując trzymany blok pamięci kiedy jest to wymagane. Implementacja tej struktury znajdująca się w bibliotece standardowej ({\it std::vector}) wykonuje tą realokacje wykorzystując schemat {\it allocate, move, deallocate}. Jednak wykorzystując interfejs wywołania systemowego {\it mremap} można sprawdzić czy system operacyjny nie byłby w stanie rozszerzyć danego bloku pamięci w miejscu, co pozwoliłoby pominąć cały proces realokacji. Tę optymalizację oraz kilka innych, zawiera napisany przeze mnie {\it rvector}.}
-\englishabstract{In C++ one of the most commonly used data structure is vector, which is a wrapper of dynamicly allocated arrays used in C. Aside from automatic memory management, it allows to dynamicly increase size of held array, with reallocation of contained memory block when it is required. STL implementation of this data structure ({\it std::vector}) executes this reallocation utilizing scheme {\it allocate, move, deallocate}. However, by using syscall {\it mremap} it is possible to check whether operating system could expand specified memory block in place, which would allow to omit whole reallocation process. My implementation of vector {\it rvector} contains that and few other optimizations.}
+\polishabstract {W języku C++ jedną z najczęściej używanych struktur danych jest wektor, który jest rozwinięciem tablic dynamicznych stosowanych w C. Oprócz automatycznego zarządzania pamięcią, pozwala on na dynamiczne zwiększanie rozmiaru trzymanej tablicy, realokując trzymany blok pamięci kiedy jest to wymagane. Implementacja tej struktury znajdująca się w bibliotece standardowej ({\it std::vector}) wykonuje tą realokacje wykorzystując schemat {\it allocate, move, deallocate}. Jednak wykorzystując interfejs wywołania systemowego {\it mremap} można sprawdzić czy system operacyjny nie byłby w stanie rozszerzyć danego bloku pamięci w miejscu, co pozwoliłoby pominąć cały proces realokacji. {\it Mremap} pozwala także na realokację obszaru pamięci w czasie stałym poprzez zmianę mapowania adresu wirtualnego na fizyczny. Jeśli typ danych w wektorze jest trywialnie przenoszony, to można wykorzystać tą możliwość do szybkiej realokacji bloku pamięci w wektorze. Tę optymalizację oraz kilka innych, zawiera napisany przeze mnie {\it rvector}.}
+\englishabstract{In C++ one of the most commonly used data structure is vector, which is a wrapper of dynamicly allocated arrays used in C. Aside from automatic memory management, it allows to dynamicly increase size of held array, with reallocation of contained memory block when it is required. STL implementation of this data structure ({\it std::vector}) executes this reallocation utilizing scheme {\it allocate, move, deallocate}. However, by using syscall {\it mremap} it is possible to check whether operating system could expand specified memory block in place, which would allow to omit whole reallocation process. {\it Mremap} may be also used to reallocate memory block in constant time by changing virtual address mapping. It can be used to quickly reallocate memory block of trivially moveable objects.  My implementation of vector {\it rvector} contains that and few other optimizations.}
 % w pracach wielu autorow nazwiska mozna oddzielic poleceniem \and
 \author         {Wojciech Oziębły}
 % w przypadku kilku promotorow, lub koniecznosci podania ich afiliacji, linie
@@ -45,14 +45,29 @@
 
 %%%%% POCZĄTEK ZASADNICZEGO TEKSTU PRACY
 
-\chapter{Wprowadzenie}
+\chapter{Other vector implementations}
+\section{std::vector}
+In my benchmarks I have used libstdc++ implementation\cite{std::vector_impl} of std::vector. With default allocator, all allocation are done with {\it operator new} and deallocations with {\it operator delete}. Reallocation is done using scheme {\it allocate, move, deallocate}, where {\it allocate} and {\it  deallocate} phases are done by given allocator. Growth factor is constant and is equal 2.
 
-\ldots
+\section{folly::fbvector}
+{\it Folly::fbvector}\cite{folly::fbvector_impl} is a part of {\it folly} library developed by Facebook. It has similiar interface for allocator to {\it std::vector}, yet by default it utilizes jemalloc for allocations, deallocations and reallocations\cite{folly::fbvector_description}. It is worth noting that {\it folly::fbvector} utilizes {\it jemalloc xallocx} function, which tries to reallocate memory in place. Growth factor depends on size of current array. Initial growth is to at least 64 bytes, probably to fill whole cache line. For non in place reallocations (small ones) and big memory blocks (at least 4096 * 32 bytes) growth factor is equal 2. Otherwise growth factor is equal 1.5, as it allows to reuse previously allocated memory. {\it Folly::fbvector} developers believe that such strategy is more memory friendly and efficient\cite{folly::fbvector_description}. Additionaly {\it folly::fbvector} uses {\it memcpy} to move objects with type decorated by {\it folly::IsRelocatable}.
+
+\section{boost::container::vector}
+{\it Boost::container::vector}\cite{boost::container::vector_impl} is the least specialized version of vector in {boost::container}. It has lower exception guarantees in order to improve performance of container\cite{boost_exceptions}. As a default allocator it uses boost version of dlmalloc\cite{dlmalloc}, which allows {\it boost::container::vector} to expand memory block forward as well as backward. To achive this, allocator stores chain of allocations instead of single allocation block. Growth factor by default is equal 1.5, but it is possible to change its value at compilation time. In my opinion {\it boost::container::vector} has the most complex implementation out of those presented in this chapter.
+
+
+\chapter{Rvector implementation}
+
 
 %%%%% BIBLIOGRAFIA
 
 \begin{thebibliography}{1}
-\bibitem{example} \ldots
+\bibitem{std::vector_impl} std::vector glibc implementation \url{https://github.com/gcc-mirror/gcc/blob/master/libstdc%2B%2B-v3/include/bits/stl_vector.h}
+\bibitem{folly::fbvector_impl} folly::fbvector implementation \url{https://github.com/facebook/folly/blob/master/folly/FBVector.h}
+\bibitem{folly::fbvector_description} folly::fbvector description \url{https://github.com/facebook/folly/blob/master/folly/docs/FBVector.md}
+\bibitem{boost::container::vector_impl} boost::container::vector documentation \url{https://www.boost.org/doc/libs/1_68_0/doc/html/boost/container/vector.html}
+\bibitem{boost_exceptions} \url{https://www.boost.org/doc/libs/1_68_0/doc/html/container/cpp_conformance.html#container.cpp_conformance.vector_exception_guarantees}
+\bibitem{dlmalloc} dlmalloc description \url{ftp://g.oswego.edu/pub/misc/malloc.c}
 \end{thebibliography}
 
 \end{document}

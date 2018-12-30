@@ -5,6 +5,8 @@ set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fno-omit-frame-pointer -fs
 set (CMAKE_LINKER_FLAGS_DEBUG "${CMAKE_LINKER_FLAGS_DEBUG} -fno-omit-frame-pointer -fsanitize=address")
 set(CMAKE_CXX_FLAGS_RELEASE "-std=c++17 -O3 -march=native -Wall -Wextra")
 
+find_package(Boost COMPONENTS container)
+
 # Download and unpack googletest at configure time
 configure_file(CMakeLists.txt.in googletest-download/CMakeLists.txt)
 execute_process(COMMAND ${CMAKE_COMMAND} -G "${CMAKE_GENERATOR}" .
@@ -61,7 +63,7 @@ add_executable(runProfile
 
 target_link_libraries(runUnitTests gtest gmock_main pthread)
 target_link_libraries(runBenchmarks benchmark pthread)
-
+target_link_libraries(runProfile ${Boost_LIBRARIES})
 
 add_test(
     NAME runUnitTests

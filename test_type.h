@@ -34,11 +34,18 @@ struct TestType
 		return *this;
 	}
 
+	TestType& operator = (TestType&& other)
+	{
+		n = other.n;
+		p = other.p;
+		other.p = nullptr;
+		return *this;
+	}
+
 	bool operator == (const TestType& other) const
 	{
 		return n == other.n and *p == *other.p;
 	}
-
 
 	bool operator < (const TestType& other) const
 	{

@@ -607,9 +607,9 @@ typename rvector<T>::iterator
 rvector<T>::emplace(rvector<T>::const_iterator position, 
                     Args&&... args)
 {
-    size_type n = position - begin();
+    auto m = std::distance(cbegin(), position);
     mm::grow(data_, length_, capacity_);
-    iterator position_ = begin() + n;
+    iterator position_ = begin() + m;
     mm::shiftr_data(position_, (end() - position_));
     new (position_) T(std::forward<Args>(args)...);
     ++length_;
