@@ -9,52 +9,43 @@ struct TestType
 
 	TestType(int a = 5, int b = 1)
 	: n(a),
-	p(new int(b))
-	{
+	p(new int(b)) {
 		aliveObjects++;
 	}
 
-	TestType(const TestType& other):
-	n(other.n),
-	p(new int(*other.p))
-	{
+	TestType(const TestType& other)
+	: n(other.n),
+	p(new int(*other.p)) {
 		aliveObjects++;
 	}
 
-	~TestType()
-	{
+	~TestType() {
 		delete p;
 		aliveObjects--;
 	}
 
-	TestType& operator = (const TestType& other)
-	{
+	TestType& operator = (const TestType& other) {
 		n = other.n;
 		*p = *other.p;
 		return *this;
 	}
 
-	TestType& operator = (TestType&& other)
-	{
+	TestType& operator = (TestType&& other) {
 		n = other.n;
-		p = other.p;
-		other.p = nullptr;
+		std::swap(p, other.p);
 		return *this;
 	}
 
-	bool operator == (const TestType& other) const
-	{
+	bool operator == (const TestType& other) const {
 		return n == other.n and *p == *other.p;
 	}
 
-	bool operator < (const TestType& other) const
-	{
+	bool operator < (const TestType& other) const {
 		return n < other.n or (n == other.n and *p < *other.p);
 	}
 
 	friend 
-	std::ostream& operator << (std::ostream& out, TestType t)
-	{
+	std::ostream& operator << (std::ostream& out, TestType t) {
 		out << t.n;
 		return out;
 	}

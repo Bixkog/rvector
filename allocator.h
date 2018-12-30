@@ -104,9 +104,8 @@ namespace mm
 	template <typename T>
 	size_type fix_capacity(size_type n)
 	{
-		n = std::max(64/sizeof(T), n);
 		if(n < map_threshold<T>)
-	        return n;
+	        return std::max(64/sizeof(T), n);
 	    return map_threshold<T> * (n/map_threshold<T> + 1);
 	}
 

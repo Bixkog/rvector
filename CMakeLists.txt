@@ -63,7 +63,7 @@ add_executable(runProfile
 
 target_link_libraries(runUnitTests gtest gmock_main pthread)
 target_link_libraries(runBenchmarks benchmark pthread)
-target_link_libraries(runProfile ${Boost_LIBRARIES})
+target_link_libraries(runProfile ${Boost_LIBRARIES} EASTL)
 
 add_test(
     NAME runUnitTests

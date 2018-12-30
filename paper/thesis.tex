@@ -1,9 +1,13 @@
 % Opcje klasy 'iithesis' opisane sa w komentarzach w pliku klasy. Za ich pomoca
 % ustawia sie przede wszystkim jezyk i rodzaj (lic/inz/mgr) pracy, oraz czy na
 % drugiej stronie pracy ma byc skladany wzor oswiadczenia o autorskim wykonaniu.
-\documentclass[declaration, inz, english, shortabstract]{iithesis}
+\RequirePackage{color}
+\documentclass[inz, english, shortabstract]{iithesis}
 
 \usepackage[utf8]{inputenc}
+\usepackage{listings}
+
+\usepackage{amsmath}
 
 %%%%% DANE DO STRONY TYTUŁOWEJ
 % Niezaleznie od jezyka pracy wybranego w opcjach klasy, tytul i streszczenie
@@ -13,8 +17,8 @@
 % polecenia \fmlinebreak.
 \polishtitle    {Szybszy std::vector.}
 \englishtitle   {Faster std::vector.}
-\polishabstract {W języku C++ jedną z najczęściej używanych struktur danych jest wektor, który jest rozwinięciem tablic dynamicznych stosowanych w C. Oprócz automatycznego zarządzania pamięcią, pozwala on na dynamiczne zwiększanie rozmiaru trzymanej tablicy, realokując trzymany blok pamięci kiedy jest to wymagane. Implementacja tej struktury znajdująca się w bibliotece standardowej ({\it std::vector}) wykonuje tą realokacje wykorzystując schemat {\it allocate, move, deallocate}. Jednak wykorzystując interfejs wywołania systemowego {\it mremap} można sprawdzić czy system operacyjny nie byłby w stanie rozszerzyć danego bloku pamięci w miejscu, co pozwoliłoby pominąć cały proces realokacji. {\it Mremap} pozwala także na realokację obszaru pamięci w czasie stałym poprzez zmianę mapowania adresu wirtualnego na fizyczny. Jeśli typ danych w wektorze jest trywialnie przenoszony, to można wykorzystać tą możliwość do szybkiej realokacji bloku pamięci w wektorze. Tę optymalizację oraz kilka innych, zawiera napisany przeze mnie {\it rvector}.}
-\englishabstract{In C++ one of the most commonly used data structure is vector, which is a wrapper of dynamicly allocated arrays used in C. Aside from automatic memory management, it allows to dynamicly increase size of held array, with reallocation of contained memory block when it is required. STL implementation of this data structure ({\it std::vector}) executes this reallocation utilizing scheme {\it allocate, move, deallocate}. However, by using syscall {\it mremap} it is possible to check whether operating system could expand specified memory block in place, which would allow to omit whole reallocation process. {\it Mremap} may be also used to reallocate memory block in constant time by changing virtual address mapping. It can be used to quickly reallocate memory block of trivially moveable objects.  My implementation of vector {\it rvector} contains that and few other optimizations.}
+\polishabstract {W języku C++ jedną z najczęściej używanych struktur danych jest wektor, który jest rozwinięciem tablic dynamicznych stosowanych w C. Oprócz automatycznego zarządzania pamięcią, pozwala on na dynamiczne zwiększanie rozmiaru trzymanej tablicy, realokując trzymany blok pamięci kiedy jest to wymagane. Implementacja tej struktury znajdująca się w bibliotece standardowej ({\it std::vector}) wykonuje tą realokacje wykorzystując schemat {\it allocate, move, deallocate}. Jednak wykorzystując interfejs wywołania systemowego {\it mremap}\cite{mremap} można sprawdzić czy system operacyjny nie byłby w stanie rozszerzyć danego bloku pamięci w miejscu, co pozwoliłoby pominąć cały proces realokacji. {\it Mremap} pozwala także na realokację obszaru pamięci w czasie stałym poprzez zmianę mapowania adresu wirtualnego na fizyczny. Jeśli typ danych w wektorze jest trywialnie przenoszony, to można wykorzystać tą możliwość do szybkiej realokacji bloku pamięci w wektorze. Tę optymalizację oraz kilka innych, zawiera napisany przeze mnie {\it rvector}.}
+\englishabstract{In C++ one of the most commonly used data structure is vector, which is a wrapper of dynamicly allocated arrays used in C. Aside from automatic memory management, it allows to dynamicly increase size of held array, with reallocation of contained memory block when it is required. STL implementation of this data structure ({\it std::vector}) executes this reallocation utilizing scheme {\it allocate, move, deallocate}. However, by using syscall {\it mremap}\cite{mremap} it is possible to check whether operating system could expand specified memory block in place, which would allow to omit whole reallocation process. {\it Mremap} may be also used to reallocate memory block in constant time by changing virtual address mapping. It can be used to quickly reallocate memory block of trivially moveable objects.  My implementation of vector {\it rvector} contains that and few other optimizations.}
 % w pracach wielu autorow nazwiska mozna oddzielic poleceniem \and
 \author         {Wojciech Oziębły}
 % w przypadku kilku promotorow, lub koniecznosci podania ich afiliacji, linie
@@ -40,8 +44,40 @@
 % ...
 %%%%%
 
-\usepackage{amsmath}
+
 \begin{document}
+
+\definecolor{mygreen}{rgb}{0,0.6,0}
+\definecolor{mygray}{rgb}{0.5,0.5,0.5}
+\definecolor{mymauve}{rgb}{0.58,0,0.82}
+
+\lstset{ 
+  backgroundcolor=\color{white},   % choose the background color; you must add \usepackage{color} or \usepackage{xcolor}; should come as last argument
+  basicstyle=\ttfamily\footnotesize,        % the size of the fonts that are used for the code
+  breakatwhitespace=false,         % sets if automatic breaks should only happen at whitespace
+  breaklines=true,                 % sets automatic line breaking
+  captionpos=b,                    % sets the caption-position to bottom
+  commentstyle=\color{mygreen},    % comment style
+  deletekeywords={...},            % if you want to delete keywords from the given language
+  escapeinside={\%*}{*)},          % if you want to add LaTeX within your code
+  extendedchars=true,              % lets you use non-ASCII characters; for 8-bits encodings only, does not work with UTF-8
+  frame=none,	                   % adds a frame around the code
+  keepspaces=true,                 % keeps spaces in text, useful for keeping indentation of code (possibly needs columns=flexible)
+  keywordstyle=\color{blue},       % keyword style
+  language=C++,                    % the language of the code
+  morekeywords={*,...},            % if you want to add more keywords to the set
+  numbers=left,                    % where to put the line-numbers; possible values are (none, left, right)
+  numbersep=5pt,                   % how far the line-numbers are from the code
+  numberstyle=\tiny\color{mygray}, % the style that is used for the line-numbers
+  rulecolor=\color{black},         % if not set, the frame-color may be changed on line-breaks within not-black text (e.g. comments (green here))
+  showspaces=false,                % show spaces everywhere adding particular underscores; it overrides 'showstringspaces'
+  showstringspaces=false,          % underline spaces within strings only
+  showtabs=false,                  % show tabs within strings adding particular underscores
+  stepnumber=1,                    % the step between two line-numbers. If it's 1, each line will be numbered
+  stringstyle=\color{mymauve},     % string literal style
+  tabsize=4,	                   % sets default tabsize to 2 spaces
+  title=\lstname                   % show the filename of files included with \lstinputlisting; also try caption instead of title
+}
 
 %%%%% POCZĄTEK ZASADNICZEGO TEKSTU PRACY
 
@@ -55,19 +91,151 @@ In my benchmarks I have used libstdc++ implementation\cite{std::vector_impl} of 
 \section{boost::container::vector}
 {\it Boost::container::vector}\cite{boost::container::vector_impl} is the least specialized version of vector in {boost::container}. It has lower exception guarantees in order to improve performance of container\cite{boost_exceptions}. As a default allocator it uses boost version of dlmalloc\cite{dlmalloc}, which allows {\it boost::container::vector} to expand memory block forward as well as backward. To achive this, allocator stores chain of allocations instead of single allocation block. Growth factor by default is equal 1.5, but it is possible to change its value at compilation time. In my opinion {\it boost::container::vector} has the most complex implementation out of those presented in this chapter.
 
+\section{eastl::vector}
+{\it Eastl::vector}\cite{eastl::vector_impl} is part of Electronic Arts Standard Template Library (EASTL) developed by Electronic Arts compoany. EASTL was designed especially as a game development library. It is considered to be more suited for console platforms\cite{eastl_faq} than other STL implementations. Default allocator in EASTL requires from user to define global {\it eastl} version of {\it operator new} that would be used for allocations. In my benchmarks I defined it to use standard version of {\it operator new}. {\it Eastl::vector} implementation is simple and similiar to {\it std::vector} one, it also utlizes {\it allocate, move, deallocate} scheme. Yet it contains only EASTL version of STL functions. Growth factor is constant and is equal 2.  
+
 
 \chapter{Rvector implementation}
+{\it Rvector}\cite{rvector_impl} implements {\it std::vector} C++17 interface with few minor differences. Most important one is that {\it rvector} does not have any exception guarantees. Yet, as {\it gcc} (and {\it Clang}) follow Itanium ABI\cite{Itanium_ABI} in regard of exception handling, other vector implementations have a guarantee of zero overhead when exception throwing does not occur. \\
+Main feature of {\it rvector} is use of syscall {\it mremap} to do reallocations. To make it possible all allocation of size greater than {\it page size} (which is 4KB) are done using syscall {\it mmap}. Smaller ones are done using {\it malloc} to reduce space consumption overhead, in that case standard {\it allocate, move, deallocate} scheme is utilized.
+
+\begin{lstlisting}[caption=rvector allocation]
+template<typename T>
+T* allocate(size_type n) {
+	if(n > map_threshold<T>)
+    	return (T*) mmap(NULL, n*sizeof(T), 
+                PROT_READ | PROT_WRITE,
+                MAP_PRIVATE | MAP_ANONYMOUS,
+                -1, 0);
+    else
+    	return (T*) malloc(n*sizeof(T));
+}
+\end{lstlisting}
+In {\it rvector} array handling depends on element type traits. Especially important is whether certain type is trivially moveable or not. To achive compilation time dispatching I have used SFINAE features with such policies:
+
+\begin{lstlisting}[caption=SFINAE policies]
+template<typename T, typename R = void>
+using T_Move = std::enable_if_t<
+				std::is_trivially_move_constructible<T>::value, R>;
+template<typename T, typename R = void>
+using NT_Move = std::enable_if_t<
+				!std::is_trivially_move_constructible<T>::value, R>;
+\end{lstlisting}
+{\it Rvector} uses {\it mremap} in two diffrent ways. For trivially moveable types, MREMAP\_MAYMOVE flag is passed, which allows {\it mremap} to reallocate memory block to other address. Because it {\it mremap} does reallocation by changing page table mapping from virtual address to memory page\cite{mremap}, it is done in constant time, and thanks to MREMAP\_MAYMOVE flag this reallocation is always succesful. 
+
+\begin{lstlisting}[caption=rvector trivial type reallocation]
+template<typename T>
+T_Move<T, T*> realloc_(T* data, 
+						size_type length, 
+						size_type capacity, 
+						size_type n) {
+	// move between malloc and mmap allocations
+	if((n > map_threshold<T>) != (capacity > map_threshold<T>)) {
+        T* new_data = allocate<T>(n);
+        memcpy(new_data, data, length * sizeof(T));
+        deallocate(data, capacity);
+        return new_data;
+    }
+    else {
+        if(capacity > map_threshold<T>)
+        	return (T*) mremap(data, capacity*sizeof(T), 
+                    		n*sizeof(T), MREMAP_MAYMOVE);
+        else
+        	return (T*) realloc(data, n*sizeof(T));
+    }
+}
+\end{lstlisting}
+For nontrivially moveable types, MREMAP\_MAYMOVE cannot be used. Without this flag {\it mremap} tries to expand memory block in place. This operation may fail, when there is not enough space in front of provided address. In that case standard reallocation is done.
+
+\begin{lstlisting}[caption=rvector nontrivial type reallocation]
+template<typename T>
+NT_Move<T, T*> realloc_(T* data, 
+						size_type length, 
+						size_type capacity, 
+						size_type n) {
+    if(capacity > map_threshold<T>) { // try mremap fast reallocation
+        void* new_data = mremap(data, capacity*sizeof(T), 
+                    		n*sizeof(T), 0);
+        if(new_data != (void*)-1)
+        	return (T*) new_data;
+    }
+    T* new_data = allocate<T>(n);
+    std::uninitialized_move_n(data, length, new_data);
+    destruct(data, data + length);
+    deallocate(data, capacity);
+    return new_data;
+}
+\end{lstlisting}
+Growth factor factor is constant and is equalt to 2. Allocation size is also fixed by such function: 
+
+\begin{lstlisting}[caption=fix capacity]
+template <typename T>
+size_type fix_capacity(size_type n) {
+	// minimal allocation is 64 bytes as in folly::fbvector
+	if(n < map_threshold<T>)
+        return std::max(64/sizeof(T), n);
+    // if requested capacity is greater that page size,
+    // it is rounded to next multiple of page size
+    return map_threshold<T> * (n/map_threshold<T> + 1);
+}
+\end{lstlisting}
+Each public function have been unit tested, using gtest library. Tests are run with few different object types, with one of them being custom {\it TestType} designed to check correctness of object creation and destruction in {\it rvector}.
+
+\begin{lstlisting}[caption=TestType]
+struct TestType {
+	int n;
+	int* p;
+	static int aliveObjects;
+
+	TestType(int a = 5, int b = 1)
+	: n(a),
+	p(new int(b)) {
+		aliveObjects++;
+	}
+
+	TestType(const TestType& other)
+	: n(other.n),
+	p(new int(*other.p)) {
+		aliveObjects++;
+	}
+
+	~TestType() {
+		delete p;
+		aliveObjects--;
+	}
+
+	TestType& operator = (const TestType& other) {
+		n = other.n;
+		*p = *other.p;
+		return *this;
+	}
+	...
+};
+\end{lstlisting}
+Tests consider trivially and nontrivially moveable types, and small (malloc allocations) and big (mmap allocations) sizes, to check all branches of {\it rvector} memory handling.
+
+\chapter{Benchmarks}
+
 
 
 %%%%% BIBLIOGRAFIA
-
 \begin{thebibliography}{1}
-\bibitem{std::vector_impl} std::vector glibc implementation \url{https://github.com/gcc-mirror/gcc/blob/master/libstdc%2B%2B-v3/include/bits/stl_vector.h}
+\bibitem{mremap} mremap syscall manual \url{http://man7.org/linux/man-pages/man2/mremap.2.html}
+\bibitem{std::vector_impl} std::vector libstdc++ implementation \url{https://github.com/gcc-mirror/gcc/blob/master/libstdc%2B%2B-v3/include/bits/stl_vector.h}
+
 \bibitem{folly::fbvector_impl} folly::fbvector implementation \url{https://github.com/facebook/folly/blob/master/folly/FBVector.h}
 \bibitem{folly::fbvector_description} folly::fbvector description \url{https://github.com/facebook/folly/blob/master/folly/docs/FBVector.md}
+
 \bibitem{boost::container::vector_impl} boost::container::vector documentation \url{https://www.boost.org/doc/libs/1_68_0/doc/html/boost/container/vector.html}
 \bibitem{boost_exceptions} \url{https://www.boost.org/doc/libs/1_68_0/doc/html/container/cpp_conformance.html#container.cpp_conformance.vector_exception_guarantees}
 \bibitem{dlmalloc} dlmalloc description \url{ftp://g.oswego.edu/pub/misc/malloc.c}
+
+\bibitem{eastl::vector_impl} eastl::vector implementation \url{https://github.com/electronicarts/EASTL/blob/master/include/EASTL/vector.h}
+\bibitem{eastl_faq} EASTL FAQ \url{https://rawgit.com/electronicarts/EASTL/master/doc/EASTL%20FAQ.html}
+
+\bibitem{rvector_impl} rvector implementation \url{https://github.com/Bixkog/rvector/blob/master/rvector.h}
+\bibitem{Itanium_ABI} Itanium ABI for exception handling \url{https://itanium-cxx-abi.github.io/cxx-abi/abi-eh.html}
 \end{thebibliography}
 
+\lstlistoflistings
 \end{document}
