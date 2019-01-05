@@ -15,10 +15,13 @@
 #include <new>
 
 void* operator new[](size_t size, const char* pName, int flags, unsigned debugFlags, const char* file, int line) {
-	return new uint8_t[size];
+	return malloc(size);
 }
 
-void* operator new[](size_t size, size_t alignment, size_t alignmentOffset, const char* pName, int flags, unsigned debugFlags, const char* file, int line);
+void* operator new[](size_t size, size_t alignment, size_t alignmentOffset, const char* pName, int flags, unsigned debugFlags, const char* file, int line) 
+{
+    return malloc(size);
+}  
 
 template<typename T, typename F>
 auto map(F f, std::vector<T> const& v) -> decltype(auto) {
@@ -64,17 +67,28 @@ public:
 	}
 
 	static
-	void clear() {
-		data.emplace_back(std::move(durations));
-		durations = std::map<std::string, double>();
+	void save_epoch(int i) {
+		for(auto const& [k, v] : durations)
+			data[i][k] += v;
 	}
 
-	static std::vector<std::map<std::string, double>> data;
+	static
+	void clear() {
+		durations.clear();
+	}
+
+	static
+	void  clear_data() {
+		data.clear();
+	}
+
 
 private:
 	std::string name;
 	std::chrono::time_point<Clock> begin;
 	static std::map<std::string, double> durations;
+public:
+	static std::vector<std::map<std::string, double>> data;
 };
 
 std::map<std::string, double> BenchTimer::durations = {};
@@ -97,20 +111,42 @@ public:
 		gen.seed(seed);
 	}
 
-	double RunSimulation(int iter = 1000, std::string name = "Simulation") {
-		BenchTimer bt(name);
-		while(iter--) {
+	void RunSimulation(int iter = 1000) {
+		for(int i = 0; i < iter; i++){
+			BenchTimer bt("Simulation");
 			(dispatch_action<Ts>(), ...);
+			if((i + 1) % 100 == 0)
+				BenchTimer::save_epoch(i / 100);
 		}
-		return bt.check();
+	}
+
+	size_t GetNeededCapacity() {
+		return (typedNeededCapacity<Ts>() + ...);
+	}
+
+	size_t GetActualCapacity() {
+		return (typedActualCapacity<Ts>() + ...);
 	}
 
 private:
+	template <typename T>
+	size_t typedNeededCapacity() {
+		auto const& typed_env = std::get<V<V<T>>>(env);
+		size_t len_sum = 0;
+		for(auto const& v : typed_env) len_sum += v.size();
+		return len_sum * sizeof(T);
+	}
+
+	template <typename T>
+	size_t typedActualCapacity() {
+		auto const& typed_env = std::get<V<V<T>>>(env);
+		size_t len_sum = 0;
+		for(auto const& v : typed_env) len_sum += v.capacity();
+		return len_sum * sizeof(T);
+	}
 
 	template <typename T>
 	void push_back_action() {
-		BenchTimer bt("push_back");
-
 		auto& typed_env = std::get<V<V<T>>>(env);
 		if(typed_env.size() == 0) {
 			construct_action<T>();
@@ -119,8 +155,9 @@ private:
 		std::uniform_int_distribution<> q_dist(1, typed_env.size() / 3 + 1);
 		std::uniform_int_distribution<> pick_dist(0, typed_env.size()-1);
 		std::uniform_int_distribution<> size_dist(1, 100000);
-
 		int q = q_dist(gen);
+		
+		BenchTimer bt("push_back");
 		while(q--) {
 			int pick = pick_dist(gen);
 			int size = size_dist(gen);
@@ -131,7 +168,6 @@ private:
 
 	template <typename T>
 	void pop_back_action() {
-		BenchTimer bt("pop_back");
 		auto& typed_env = std::get<V<V<T>>>(env);
 		if(typed_env.size() == 0) {
 			construct_action<T>();
@@ -139,9 +175,9 @@ private:
 		}
 		std::uniform_int_distribution<> q_dist(1, typed_env.size() / 3 + 1);
 		std::uniform_int_distribution<> pick_dist(0, typed_env.size()-1);
-		
-
 		int q = q_dist(gen);
+		
+		BenchTimer bt("pop_back");
 		while(q--) {
 			int pick = pick_dist(gen);
 			std::uniform_int_distribution<> size_dist(0, typed_env[pick].size());
@@ -153,13 +189,13 @@ private:
 
 	template <typename T>
 	void construct_action() {
-		BenchTimer bt("construct");
-
 		auto& typed_env = std::get<V<V<T>>>(env);
 		std::uniform_int_distribution<> q_dist(1, 3);
 		std::uniform_int_distribution<> size_dist(1, 1000);
 
 		int q = q_dist(gen);
+		
+		BenchTimer bt("construct");
 		while(q--) {
 			int size = size_dist(gen);
 			typed_env.emplace_back();
@@ -170,8 +206,6 @@ private:
 
 	template <typename T>
 	void copy_action() {
-		BenchTimer bt("copy");
-
 		auto& typed_env = std::get<V<V<T>>>(env);
 		if(typed_env.size() == 0) {
 			construct_action<T>();
@@ -179,8 +213,9 @@ private:
 		}
 		std::uniform_int_distribution<> q_dist(1, 3);
 		std::uniform_int_distribution<> pick_dist(0, typed_env.size()-1);
-
 		int q = q_dist(gen);
+		
+		BenchTimer bt("copy");
 		while(q--) {
 			int pick = pick_dist(gen);
 			typed_env.emplace_back(typed_env[pick].begin(), typed_env[pick].end());
@@ -189,8 +224,6 @@ private:
 
 	template <typename T>
 	void insert_action() {
-		BenchTimer bt("insert");
-
 		auto& typed_env = std::get<V<V<T>>>(env);
 		if(typed_env.size() == 0) {
 			construct_action<T>();
@@ -198,9 +231,11 @@ private:
 		}
 		std::uniform_int_distribution<> q_dist(1, typed_env.size() / 3 + 1);
 		std::uniform_int_distribution<> pick_dist(0, typed_env.size() - 1);
-		std::uniform_int_distribution<> size_dist(1, 10000);
+		std::uniform_int_distribution<> size_dist(1, 100);
 
 		int q = q_dist(gen);
+		
+		BenchTimer bt("insert");
 		while(q--) {
 			int pick = pick_dist(gen);
 			int size = size_dist(gen);
@@ -218,8 +253,6 @@ private:
 
 	template <typename T>
 	void erase_action() {
-		BenchTimer bt("erase");
-
 		auto& typed_env = std::get<V<V<T>>>(env);
 		if(typed_env.size() == 0) {
 			construct_action<T>();
@@ -227,8 +260,10 @@ private:
 		}
 		std::uniform_int_distribution<> q_dist(1, typed_env.size() / 3 + 1);
 		std::uniform_int_distribution<> pick_dist(0, typed_env.size()-1);
-
+		
 		int q = q_dist(gen);
+		
+		BenchTimer bt("erase");
 		while(q--) {
 			int pick = pick_dist(gen);
 			if(typed_env[pick].size() == 0) continue;
@@ -264,64 +299,37 @@ private:
 };
 
 template <template<typename> typename V, typename... Ts>
-void test_type(std::string name, int max_it = 500) {
-	for(int iter = 100; iter <= max_it; iter += 100) {
-		double avg = 0.;
-		for(int seed = 12345512; seed < 12345512 + 5; seed++) {
-			VectorEnv<V, Ts...> v_env(seed);
-			avg += v_env.RunSimulation(iter);
-		}
-		std::cout << name << ": " << iter << " iter "
-					<< avg / 5. << " s" << std::endl;
-	}
-	BenchTimer::print_data();
-	BenchTimer::clear();
-}
-
-template <template<typename> typename V, typename... Ts>
 void experiment(std::string name, int max_it = 1000, int tests = 10) {
-	std::vector<int> it_count;
-	std::vector<double> means;
-	std::vector<double> variances;
-	for(int iter = 100; iter <= max_it; iter += 100) {
-		double avg = 0.;
-		std::vector<double> test_res;
-		for(int seed = 12345512; seed < 12345512 + tests; seed++) {
-			VectorEnv<V, Ts...> v_env(seed);
-			test_res.push_back(v_env.RunSimulation(iter));
-			avg += test_res.back();
-		}
-		auto extremum = std::max_element(test_res.begin(), test_res.end());
-		test_res.erase(extremum);
-		avg = (avg - *extremum) / (tests - 1);
+	BenchTimer::data.resize(max_it / 100);
+	for(int seed = 12345512; seed < 12345512 + tests; seed++) {
+		VectorEnv<V, Ts...> v_env(seed);
+		v_env.RunSimulation(max_it);
 		BenchTimer::clear();
-		means.push_back(avg);
-		it_count.push_back(iter);
-		double var = 0.;
-		for(double res : test_res) var += (avg - res) * (avg - res);
-		variances.push_back(std::sqrt(var / (tests - 1)));
-		std::cout << name << ": " 
-					<< iter << " iter, "
-					<< avg / tests << "s mean, " 
-					<< variances.back() << "s stddev" << std::endl;
 	}
 
 	auto data = BenchTimer::data;
+	BenchTimer::clear_data();
 	if(data.empty()) return;
-	BenchTimer::data.clear();
+	for(size_t i = 0; i < data.size(); ++i) {
+		std::cout << name << ": " 
+				<< (i+1) * 100 << " iter, "
+				<< data[i]["Simulation"] << "s" << std::endl;
+	}
 
 	std::ofstream out("data/" + name + ".csv");
 
-	out << "iterations,mean,variance,";
+	out << "iterations";
 	for(auto const& [k, v] : data[0]) {
 		(void) v;
-		out << k << ",";
+		out << "," << k;
 	}
 	out << std::endl;
-
-	for(auto const& [it, mean, var, row] : zip(it_count, means, variances, data)) {
-		out << it << "," << mean << "," << var;
-		for([[maybe_unused]] auto const& [k, v] : row) {
+	
+	for(size_t i = 0; i < data.size(); i++) {
+		auto& row = data[i];
+		size_t it = (i+1) * 100;
+		out << it;
+		for(auto const& [k, v] : row) {
 			(void) k;
 			out << "," << v;
 		}
@@ -329,31 +337,35 @@ void experiment(std::string name, int max_it = 1000, int tests = 10) {
 	}
 }
 
+using boost_gf = boost::container::growth_factor_100;
+using boost_options = boost::container::vector_options_t<boost::container::growth_factor<boost_gf>>;
 
+template<typename T>
+using boost_vector = boost::container::vector<T, boost::container::new_allocator<T>, boost_options>; 
 
 int main()
 {
 	experiment<rvector, int>("rvector<int>", 1000);
-	// experiment<std::vector, int>("std::vector<int>", 1000);
-	// experiment<folly::fbvector, int>("folly::fbvector<int>", 1000);
-	// experiment<boost::container::vector, int>("boost::container::vector<int>", 1000);
-	// experiment<eastl::vector, int>("eastl::vector<int>", 1000);
+	experiment<std::vector, int>("std::vector<int>", 1000);
+	experiment<folly::fbvector, int>("folly::fbvector<int>", 1000);
+	experiment<boost_vector, int>("boost_vector<int>", 1000);
+	experiment<eastl::vector, int>("eastl::vector<int>", 1000);
 	
-	experiment<rvector, TestType>("rvector<TestType>");
+	// experiment<rvector, TestType>("rvector<TestType>");
 	// experiment<std::vector, TestType>("std::vector<TestType>");
 	// experiment<folly::fbvector, TestType>("folly::fbvector<TestType>");
-	// experiment<boost::container::vector, TestType>("boost::container::vector<TestType>");
+	// experiment<boost_vector, TestType>("boost_vector<TestType>");
 	// experiment<eastl::vector, TestType>("eastl::vector<TestType>");
 	
-	experiment<rvector, std::array<int, 10>>("rvector<std::array<int,10>>");
+	// experiment<rvector, std::array<int, 10>>("rvector<std::array<int,10>>");
 	// experiment<std::vector, std::array<int, 10>>("std::vector<std::array<int,10>>");
 	// experiment<folly::fbvector,  std::array<int, 10>>("folly::fbvector<std::array<int,10>>");
-	// experiment<boost::container::vector,  std::array<int, 10>>("boost::container::vector<std::array<int,10>>");
+	// experiment<boost_vector,  std::array<int, 10>>("boost_vector<std::array<int,10>>");
 	// experiment<eastl::vector,  std::array<int, 10>>("eastl::vector<std::array<int,10>>");
 	
-	experiment<rvector, std::string, int, std::array<int, 10>>("rvector<std::string, int, std::array<int,10>>", 800);
-	// experiment<std::vector, std::string, int, std::array<int, 10>>("std::vector<std::string, int, std::array<int,10>>", 800);
-	// experiment<folly::fbvector, std::string, int, std::array<int, 10>>("folly::fbvector<std::string, int, std::array<int,10>>", 800);
-	// experiment<boost::container::vector, std::string, int, std::array<int, 10>>("boost::container::vector<std::string, int, std::array<int,10>>", 800);
-	// experiment<eastl::vector, std::string, int, std::array<int, 10>>("eastl::vector<std::string, int, std::array<int,10>>", 800);
+	// experiment<rvector, std::string, int, std::array<int, 10>>("rvector<std::string, int, std::array<int,10>>", 700);
+	// experiment<std::vector, std::string, int, std::array<int, 10>>("std::vector<std::string, int, std::array<int,10>>", 700);
+	// experiment<folly::fbvector, std::string, int, std::array<int, 10>>("folly::fbvector<std::string, int, std::array<int,10>>", 700);
+	// experiment<boost_vector, std::string, int, std::array<int, 10>>("boost_vector<std::string, int, std::array<int,10>>", 700);
+	// experiment<eastl::vector, std::string, int, std::array<int, 10>>("eastl::vector<std::string, int, std::array<int,10>>", 700);
 }
