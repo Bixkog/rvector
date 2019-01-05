@@ -6,8 +6,10 @@
 
 \usepackage[utf8]{inputenc}
 \usepackage{listings}
-
+\usepackage{enumitem}
 \usepackage{amsmath}
+\usepackage{graphicx}
+\usepackage{textcomp}
 
 %%%%% DANE DO STRONY TYTUŁOWEJ
 % Niezaleznie od jezyka pracy wybranego w opcjach klasy, tytul i streszczenie
@@ -15,8 +17,8 @@
 % Pamietaj o madrym (zgodnym z logicznym rozbiorem zdania oraz estetyka) recznym
 % zlamaniu wierszy w temacie pracy, zwlaszcza tego w jezyku pracy. Uzyj do tego
 % polecenia \fmlinebreak.
-\polishtitle    {Szybszy std::vector.}
-\englishtitle   {Faster std::vector.}
+\polishtitle    {Szybki vector z mremap}
+\englishtitle   {Fast vector with mremap}
 \polishabstract {W języku C++ jedną z najczęściej używanych struktur danych jest wektor, który jest rozwinięciem tablic dynamicznych stosowanych w C. Oprócz automatycznego zarządzania pamięcią, pozwala on na dynamiczne zwiększanie rozmiaru trzymanej tablicy, realokując trzymany blok pamięci kiedy jest to wymagane. Implementacja tej struktury znajdująca się w bibliotece standardowej ({\it std::vector}) wykonuje tą realokacje wykorzystując schemat {\it allocate, move, deallocate}. Jednak wykorzystując interfejs wywołania systemowego {\it mremap}\cite{mremap} można sprawdzić czy system operacyjny nie byłby w stanie rozszerzyć danego bloku pamięci w miejscu, co pozwoliłoby pominąć cały proces realokacji. {\it Mremap} pozwala także na realokację obszaru pamięci w czasie stałym poprzez zmianę mapowania adresu wirtualnego na fizyczny. Jeśli typ danych w wektorze jest trywialnie przenoszony, to można wykorzystać tą możliwość do szybkiej realokacji bloku pamięci w wektorze. Tę optymalizację oraz kilka innych, zawiera napisany przeze mnie {\it rvector}.}
 \englishabstract{In C++ one of the most commonly used data structure is vector, which is a wrapper of dynamicly allocated arrays used in C. Aside from automatic memory management, it allows to dynamicly increase size of held array, with reallocation of contained memory block when it is required. STL implementation of this data structure ({\it std::vector}) executes this reallocation utilizing scheme {\it allocate, move, deallocate}. However, by using syscall {\it mremap}\cite{mremap} it is possible to check whether operating system could expand specified memory block in place, which would allow to omit whole reallocation process. {\it Mremap} may be also used to reallocate memory block in constant time by changing virtual address mapping. It can be used to quickly reallocate memory block of trivially moveable objects.  My implementation of vector {\it rvector} contains that and few other optimizations.}
 % w pracach wielu autorow nazwiska mozna oddzielic poleceniem \and
@@ -81,9 +83,15 @@
 
 %%%%% POCZĄTEK ZASADNICZEGO TEKSTU PRACY
 
-\chapter{Other vector implementations}
+\chapter{Vector data structure}
+
+Vector is the most commonly used and general data structure in C++. Its purpuse is simple, management of continous dynamic array of objects. Because of its universal use and general applicability, vector is required to be fast, memory efficient and reliable. It is supposed to work great as a container for billions of int objects, as well as for few big abstract objects. As almost all software written in C++ relies heavily on vectors, efficient implementation of this data structure is highly desirable.
+\\
+Vector stores all objects in a continous memory block, which allows constant time access to its elements. It allows to dynamically add and erase elements, with storage being automatically expanded when needed. To do it efficiently, capacity of vector is often greater than actual amount of stored elements. Key parameter in any vector implementation is {\it growth factor}, which defines expansion rate of capacity when an additional memory is required. The most common value of growth factor is 2. With such allocation strategy, adding element to the back of vector is amortized constant time. Yet, as the reallocation process is often very costly, it renders vector not suitable for certain tasks, e.g. realtime systems. 
+
+\chapter{Common vector implementations}
 \section{std::vector}
-In my benchmarks I have used libstdc++ implementation\cite{std::vector_impl} of std::vector. With default allocator, all allocation are done with {\it operator new} and deallocations with {\it operator delete}. Reallocation is done using scheme {\it allocate, move, deallocate}, where {\it allocate} and {\it  deallocate} phases are done by given allocator. Growth factor is constant and is equal 2.
+In my benchmarks I have used libstdc++ implementation\cite{std::vector_impl} of std::vector. With default allocator, all allocation are done with {\it operator new} and deallocations with {\it operator delete}. Reallocation is done using scheme {\it allocate, move, deallocate}, where {\it allocate} and {\it  deallocate} phases are done by a given allocator. Growth factor is constant and is equal 2.
 
 \section{folly::fbvector}
 {\it Folly::fbvector}\cite{folly::fbvector_impl} is a part of {\it folly} library developed by Facebook. It has similiar interface for allocator to {\it std::vector}, yet by default it utilizes jemalloc for allocations, deallocations and reallocations\cite{folly::fbvector_description}. It is worth noting that {\it folly::fbvector} utilizes {\it jemalloc xallocx} function, which tries to reallocate memory in place. Growth factor depends on size of current array. Initial growth is to at least 64 bytes, probably to fill whole cache line. For non in place reallocations (small ones) and big memory blocks (at least 4096 * 32 bytes) growth factor is equal 2. Otherwise growth factor is equal 1.5, as it allows to reuse previously allocated memory. {\it Folly::fbvector} developers believe that such strategy is more memory friendly and efficient\cite{folly::fbvector_description}. Additionaly {\it folly::fbvector} uses {\it memcpy} to move objects with type decorated by {\it folly::IsRelocatable}.
@@ -96,7 +104,7 @@ In my benchmarks I have used libstdc++ implementation\cite{std::vector_impl} of 
 
 
 \chapter{Rvector implementation}
-{\it Rvector}\cite{rvector_impl} implements {\it std::vector} C++17 interface with few minor differences. Most important one is that {\it rvector} does not have any exception guarantees. Yet, as {\it gcc} (and {\it Clang}) follow Itanium ABI\cite{Itanium_ABI} in regard of exception handling, other vector implementations have a guarantee of zero overhead when exception throwing does not occur. \\
+{\it Rvector}\cite{rvector_impl} implements {\it std::vector} C++17 interface with few minor differences. Most important one is that {\it rvector} does not have any exception guarantees. Yet, as {\it gcc} (and {\it Clang}) follows Itanium ABI\cite{Itanium_ABI} in regard of exception handling, other vector implementations have a guarantee of zero overhead when exception throwing does not occur. \\
 Main feature of {\it rvector} is use of syscall {\it mremap} to do reallocations. To make it possible all allocation of size greater than {\it page size} (which is 4KB) are done using syscall {\it mmap}. Smaller ones are done using {\it malloc} to reduce space consumption overhead, in that case standard {\it allocate, move, deallocate} scheme is utilized.
 
 \begin{lstlisting}[caption=rvector allocation]
@@ -166,7 +174,7 @@ NT_Move<T, T*> realloc_(T* data,
     return new_data;
 }
 \end{lstlisting}
-Growth factor factor is constant and is equalt to 2. Allocation size is also fixed by such function: 
+Growth factor factor is equal to 2. Allocation size is also fixed by such function: 
 
 \begin{lstlisting}[caption=fix capacity]
 template <typename T>
@@ -174,12 +182,12 @@ size_type fix_capacity(size_type n) {
 	// minimal allocation is 64 bytes as in folly::fbvector
 	if(n < map_threshold<T>)
         return std::max(64/sizeof(T), n);
-    // if requested capacity is greater that page size,
-    // it is rounded to next multiple of page size
+    // if requested capacity is greater than page size,
+    // it is rounded to the next multiple of page size
     return map_threshold<T> * (n/map_threshold<T> + 1);
 }
 \end{lstlisting}
-Each public function have been unit tested, using gtest library. Tests are run with few different object types, with one of them being custom {\it TestType} designed to check correctness of object creation and destruction in {\it rvector}.
+Each public function have been unit tested, using gtest library\cite{rvector_tests}. Tests are run with few different object types, with one of them being custom {\it TestType} designed to check correctness of object creation and destruction in {\it rvector}.
 
 \begin{lstlisting}[caption=TestType]
 struct TestType {
@@ -214,7 +222,140 @@ struct TestType {
 \end{lstlisting}
 Tests consider trivially and nontrivially moveable types, and small (malloc allocations) and big (mmap allocations) sizes, to check all branches of {\it rvector} memory handling.
 
-\chapter{Benchmarks}
+\chapter{Benchmarks environment}
+\section{VectorEnv}
+In order to benchmark vectors in complex, more realistic situations I have designed vector benchmark environment template.
+
+\begin{lstlisting}[caption=VectorEnv declaration]
+template <template<typename> typename V, typename... Ts>
+class VectorEnv;
+\end{lstlisting}
+For given container type (e.g. {\it std::vector, rvector}) and element types it creates 
+\lstinline{std::tuple<V<V<Ts>>...> env}
+will contain all vectors created during benchmark. 
+With created environment simulation can be run for given number of iterations.
+At each iteration, for each element type, random action is dispatched.
+\begin{lstlisting}[caption=RunSimulation]
+double RunSimulation(int iter = 1000, std::string name) {
+	BenchTimer bt(name);
+	while(iter--) {
+		(dispatch_action<Ts>(), ...);
+	}
+	return bt.check();
+}
+\end{lstlisting}
+To gather time data I used custom class {\it BenchTimer}, where objects of that type utilize RAI pattern to save time spent in their scope;
+
+\clearpage
+\section{Simulation actions}
+\begin{itemize}
+\item [construct action]
+\begin{lstlisting}[caption=construct action]
+template <typename T>
+void construct_action() {
+	auto& typed_env = std::get<V<V<T>>>(env);
+	std::uniform_int_distribution<> q_dist(1, 3);
+	std::uniform_int_distribution<> size_dist(1, 1000);
+	int q = q_dist(gen);
+	
+	BenchTimer bt("construct");
+	while(q--) {
+		int size = size_dist(gen);
+		typed_env.emplace_back();
+		while(size--)
+			typed_env.back().emplace_back();
+	}
+}
+\end{lstlisting}
+Construct action creates few small vectors. Elements are emplaced one by one in order to check speed of small memory block reallocations. 
+
+\item [push\_back action]
+\begin{lstlisting}[caption=push\_back action]
+template <typename T>
+void push_back_action() {
+	auto& typed_env = std::get<V<V<T>>>(env);
+	if(typed_env.size() == 0) {
+		construct_action<T>();
+		return;
+	}
+	std::uniform_int_distribution<> 
+				q_dist(1, typed_env.size() / 3 + 1);
+	std::uniform_int_distribution<> 
+				pick_dist(0, typed_env.size()-1);
+	std::uniform_int_distribution<> 
+				size_dist(1, 100000);
+	int q = q_dist(gen);
+	
+	BenchTimer bt("push_back");
+	while(q--) {
+		int pick = pick_dist(gen);
+		int size = size_dist(gen);
+		while(size--)
+			typed_env[pick].emplace_back();
+	}
+}
+\end{lstlisting}
+Adds many elements (up to 100000) to part of environment (up to 1/3 with replacament). Other actions randomize the process in similar manner.
+
+\item [pop\_back action]
+Pops elements (up to size of picked vector) of part of environment (up to 1/3 with replacement). 
+
+\item [copy action]
+Copies up to 3 vectors (with replacement) of environment.
+
+\item[insert action]
+Inserts elements (into random position of picked vector, up to 10000) into part of environment (up to 1/3 with replacement).
+
+\item[erase action]
+Erases elements (between random positions in picked vector) from part of environment (up to 1/3 with replacement).
+\end{itemize}
+
+\section {Experiments}
+\begin{lstlisting}[caption=experiment function]
+template <template<typename> typename V, typename... Ts>
+void experiment(std::string name, 
+				int max_it = 1000, 
+				int tests = 10) {
+	for(int iter = 100; iter <= max_it; iter += 100) {
+		std::vector<double> test_res;
+		for(int seed = 12345512; seed < 12345512 + tests; seed++) 
+		{
+			VectorEnv<V, Ts...> v_env(seed);
+			test_res.push_back(v_env.RunSimulation(iter));
+		}
+		// data gathering and saving
+		...
+}
+\end{lstlisting}
+For each tested vector implementation I have run experiment function with few different element types (Ts...). After gathering resaults for certain iteration count, maximum one is deleted in order to reduce variance.
+
+
+\begin{figure}[h!]
+\caption{Needed space consumption for element types \lstinline{int, std::string, std::array<int, 10>} [bytes]}
+\label{space_consumption}
+\includegraphics{length_<std::string,int,std::array<int,10>>}
+\end{figure}
+
+As it can be seen on Figure \ref{space_consumption} average number of bytes needed for environment (sum of lengths of vectors) is increasing with iterations. Benchmarks with more iterations will show vector operations effieciency on larger arrays and more fragmented memory.
+
+\chapter{Benchmarks results}
+
+I have benchmarked {\it std::vector, rvector, folly::fbvector, boost::container::vector, eastl::vector} using my {\it VectorEnv} framework. All vectors had growth factor equal 2, except {\it folly::fbvector} which has custom growth factor. I have done experiments for each of those with such element types:
+\begin{itemize}
+\item \lstinline{int}
+\item \lstinline{std::array <int, 10>}
+\item \lstinline{TestType}
+\item \lstinline{int, std::string, std::array<int, 10>}
+\end{itemize}
+
+\subsection{Element types: int}
+Integer is one of tested element types to check how efficient vector is for trivial, small objects. 
+
+\begin{figure}[h!]
+\caption{Total simulation time for element type \lstinline{TestType}}
+\label{testtype_simulation}
+\includegraphics{testtype_simulation}
+\end{figure}
 
 
 
@@ -235,7 +376,11 @@ Tests consider trivially and nontrivially moveable types, and small (malloc allo
 
 \bibitem{rvector_impl} rvector implementation \url{https://github.com/Bixkog/rvector/blob/master/rvector.h}
 \bibitem{Itanium_ABI} Itanium ABI for exception handling \url{https://itanium-cxx-abi.github.io/cxx-abi/abi-eh.html}
+
+\bibitem{rvector_tests} rvector tests \url{https://github.com/Bixkog/rvector/blob/master/test.cpp}
 \end{thebibliography}
 
+
+\listoffigures
 \lstlistoflistings
 \end{document}

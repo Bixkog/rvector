@@ -19,6 +19,13 @@ struct TestType
 		aliveObjects++;
 	}
 
+	TestType(TestType&& other)
+	: n(other.n),
+		p(other.p) {
+		aliveObjects++;
+		other.p = nullptr;
+	}
+
 	~TestType() {
 		delete p;
 		aliveObjects--;
@@ -26,6 +33,7 @@ struct TestType
 
 	TestType& operator = (const TestType& other) {
 		n = other.n;
+		if (!p) p = new int();
 		*p = *other.p;
 		return *this;
 	}
