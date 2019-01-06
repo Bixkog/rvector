@@ -161,7 +161,7 @@ namespace mm
 						size_type n)
 	{
 		size_type new_capacity = fix_capacity<T>(n);
-		if(new_capacity < map_threshold<T> and capacity > map_threshold<T>)
+		if(UNLIKELY(new_capacity < map_threshold<T> and capacity > map_threshold<T>))
 			return;
 	    if(data)
 	        data = realloc_(data, length, capacity, new_capacity);

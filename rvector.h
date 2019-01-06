@@ -653,16 +653,16 @@ rvector<T>::insert(rvector<T>::iterator position, size_type n, const T& x)
         mm::change_capacity(data_, length_, capacity_, new_cap);
         position = begin() + m;
     }
-    // mm::shiftr_data(position, (end() - position_), n);
-    size_type rest = std::distance(position, end());
+    auto end_ = end();
+    size_type rest = std::distance(position, end_);
     if(rest > n) {
-        std::uninitialized_copy(position + rest - n, end(), end());
-        std::copy_backward(position, position + rest-n, end());
+        std::uninitialized_move(end_ - n, end_, end_);
+        std::move_backward(position, end_ - n, end_);
         std::fill(position, position + n, x);
     } else {
-        std::uninitialized_copy(position, end(), end() + n - rest);
-        std::fill(position, end(), x);
-        std::uninitialized_fill(end(), end() + n - rest, x);
+        std::uninitialized_move(position, end_, position + n);
+        std::fill(position, end_, x);
+        std::uninitialized_fill(end_, position + n, x);
     }
     length_ += n;
     return position;
@@ -682,15 +682,16 @@ rvector<T>::insert (rvector<T>::iterator position, InputIterator first,
         mm::change_capacity(data_, length_, capacity_, new_cap);
         position = begin() + m;
     }
-    size_type rest = std::distance(position, end());
+    auto end_ = end();
+    size_type rest = std::distance(position, end_);
     if(rest > n) {
-        std::uninitialized_copy(position + rest - n, end(), end());
-        std::copy_backward(position, position + rest-n, end());
+        std::uninitialized_move(end_ - n, end_, end_);
+        std::move_backward(position, end_ - n, end_);
         std::copy(first, last, position);
     } else {
-        std::uninitialized_copy(position, end(), end() + n - rest);
+        std::uninitialized_move(position, end_, position + n);
         std::copy(first, first + rest, position);
-        std::uninitialized_copy(first + rest, last, end());
+        std::uninitialized_copy(first + rest, last, end_);
     }
     length_ += n;
     return position;    
@@ -710,15 +711,16 @@ rvector<T>::insert(rvector<T>::iterator position, std::initializer_list<T> ilist
         mm::change_capacity(data_, length_, capacity_, new_cap);
         position = begin() + m;  
     }
-    size_type rest = std::distance(position, end());
+    auto end_ = end();
+    size_type rest = std::distance(position, end_);
     if(rest > n) {
-        std::uninitialized_copy(position + rest - n, end(), end());
-        std::copy_backward(position, position + rest-n, end());
+        std::uninitialized_move(end_ - n, end_, end_);
+        std::move_backward(position, end_ - n, end_);
         std::move(first, last, position);
     } else {
-        std::uninitialized_copy(position, end(), end() + n - rest);
+        std::uninitialized_move(position, end_, position + n);
         std::move(first, first + rest, position);
-        std::uninitialized_move(first + rest, last, end());
+        std::uninitialized_move(first + rest, last, end_);
     }
     length_ += n;
     return position; 
@@ -740,7 +742,7 @@ rvector<T>::erase(rvector<T>::iterator first, rvector<T>::iterator last)
 {
     auto n = std::distance(first, last);
     if (last != end())
-        std::copy(last, end(), first);
+        std::move(last, end(), first);
     mm::destruct(end() - n, end());
     length_ -= n;
     return first;
