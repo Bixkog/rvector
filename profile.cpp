@@ -195,10 +195,10 @@ private:
 
 		int q = q_dist(gen);
 		
-		BenchTimer bt("construct");
 		while(q--) {
 			int size = size_dist(gen);
 			typed_env.emplace_back();
+			BenchTimer bt("construct");
 			while(size--)
 				typed_env.back().emplace_back();
 		}
@@ -345,11 +345,11 @@ using boost_vector = boost::container::vector<T, boost::container::new_allocator
 
 int main()
 {
-	experiment<rvector, int>("rvector<int>", 1300);
-	// experiment<std::vector, int>("std::vector<int>", 1300);
-	// experiment<folly::fbvector, int>("folly::fbvector<int>", 1300);
-	// experiment<boost_vector, int>("boost_vector<int>", 1300);
-	// experiment<eastl::vector, int>("eastl::vector<int>", 1300);
+	// experiment<rvector, int>("rvector<int>", 2000);
+	// experiment<std::vector, int>("std::vector<int>", 2000);
+	// experiment<folly::fbvector, int>("folly::fbvector<int>", 2000);
+	// experiment<boost_vector, int>("boost_vector<int>", 2000);
+	// experiment<eastl::vector, int>("eastl::vector<int>", 2000);
 	
 	// experiment<rvector, TestType>("rvector<TestType>");
 	// experiment<std::vector, TestType>("std::vector<TestType>");

@@ -258,10 +258,10 @@ void construct_action() {
 	std::uniform_int_distribution<> size_dist(1, 1000);
 	int q = q_dist(gen);
 	
-	BenchTimer bt("construct");
 	while(q--) {
 		int size = size_dist(gen);
 		typed_env.emplace_back();
+		BenchTimer bt("construct");
 		while(size--)
 			typed_env.back().emplace_back();
 	}
@@ -348,16 +348,46 @@ I have benchmarked {\it std::vector, rvector, folly::fbvector, boost::container:
 \item \lstinline{int, std::string, std::array<int, 10>}
 \end{itemize}
 
-\subsection{Element types: int}
-Integer is one of tested element types to check how efficient vector is for trivial, small objects. 
+\section{Element types: int}
+Integer is one of tested element types to check how efficient vector is for trivial, small objects. Benchmarks have shown that {\it std::vector} with simple implementation containing intrinsic operations did much better than more complex ones. 
 
 \begin{figure}[h!]
-\caption{Total simulation time for element type \lstinline{TestType}}
-\label{testtype_simulation}
-\includegraphics{testtype_simulation}
+\caption{Pop\_back action time for element type \lstinline{int}}
+\label{int_pop_back}
+\includegraphics{plots/int_pop_back}
 \end{figure}
 
+It turns out that {\it folly::fbvector} and {\it boost::container::vector} implementation of pop\_back checks whether object is trivially destructible at runtime instead of at compilation time. Results of pop\_back action benchmark \ref{int_pop_back} show that branching at pop\_back makes it much slower.
 
+\begin{figure}[h!]
+\caption{Copy action time for element type \lstinline{int}}
+\label{int_copy}
+\includegraphics{plots/int_copy}
+\end{figure}
+
+\begin{figure}[h!]
+\caption{Copy action time for element type \lstinline{int} with size constrained to 100}
+\label{int_copy_constrained}
+\includegraphics{plots/int_copy_constrained}
+\end{figure}
+
+{\it Rvector} falls behing other implementation at copy action benchmark as it can be seen at Figure \ref{int_copy}. As for \lstinline{int} element type (and all other trivially copyable types), copy constructor is equivalent to single allocation and memcpy. During benchmarks {\it rvector} mainly uses mmap to allocate memory block for copy, which is much slower that allocation with other memory managers. Figure \ref{int_copy_constrained} shows that {\it rvector} is as fast as other vectors when it does not use mmap to allocate memory for copy, because size of copy is constrained to 400 bytes.
+
+\begin{figure}[h!]
+\caption{Push\_back operation time for element type \lstinline{int}}
+\label{int_push_back}
+\includegraphics{plots/int_push_back}
+\end{figure}
+
+{\it Rvector} did better that other vectors at push\_back action benchmark, yet difference is not as big as for other element types. Because vectors did not operate on big memory blocks, even at large number of elements, reallocation optimalizations did not induce much speed up.
+
+\begin{figure}[h!]
+\caption{Total simulation time for element type \lstinline{int}}
+\label{int_simulation}
+\includegraphics{plots/int_Simulation}
+\end{figure}
+
+Because all vector implementation got similar results on erase and insert action results, overall score is mainly influenced by push\_back and pop\_back action.
 
 %%%%% BIBLIOGRAFIA
 \begin{thebibliography}{1}
