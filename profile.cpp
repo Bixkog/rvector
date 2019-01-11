@@ -112,7 +112,7 @@ public:
 	}
 
 	void RunSimulation(int iter = 1000) {
-		for(int i = 0; i < iter; i++){
+		for(int i = 0; i < iter; i++) {
 			BenchTimer bt("Simulation");
 			(dispatch_action<Ts>(), ...);
 			if((i + 1) % 100 == 0)
@@ -129,6 +129,12 @@ public:
 	}
 
 private:
+	template <typename T>
+	void initVectors() {
+		auto& typed_env = std::get<V<V<T>>>(env);
+		typed_env.resize(5);
+	}
+
 	template <typename T>
 	size_t typedNeededCapacity() {
 		auto const& typed_env = std::get<V<V<T>>>(env);
@@ -154,7 +160,7 @@ private:
 		}
 		std::uniform_int_distribution<> q_dist(1, typed_env.size() / 3 + 1);
 		std::uniform_int_distribution<> pick_dist(0, typed_env.size()-1);
-		std::uniform_int_distribution<> size_dist(1, 100000);
+		std::uniform_int_distribution<> size_dist(1, 10000);
 		int q = q_dist(gen);
 		
 		BenchTimer bt("push_back");
@@ -215,10 +221,11 @@ private:
 		std::uniform_int_distribution<> pick_dist(0, typed_env.size()-1);
 		int q = q_dist(gen);
 		
-		BenchTimer bt("copy");
 		while(q--) {
 			int pick = pick_dist(gen);
-			typed_env.emplace_back(typed_env[pick].begin(), typed_env[pick].end());
+			typed_env.emplace_back();
+			BenchTimer bt("copy");
+			typed_env.back().assign(typed_env[pick].begin(), typed_env[pick].end());
 		}
 	}
 
@@ -287,8 +294,6 @@ private:
 			case 4: copy_action<T>(); break;
 			case 5: insert_action<T>(); break;
 			case 6: erase_action<T>(); break;
-			default:
-				std::cout << "ADD ACTION" << std::endl;
 		}
 	}
 
@@ -299,7 +304,7 @@ private:
 };
 
 template <template<typename> typename V, typename... Ts>
-void experiment(std::string name, int max_it = 1000, int tests = 10) {
+void experiment(std::string name, int max_it = 1500, int tests = 10) {
 	BenchTimer::data.resize(max_it / 100);
 	for(int seed = 12345512; seed < 12345512 + tests; seed++) {
 		VectorEnv<V, Ts...> v_env(seed);
@@ -309,7 +314,7 @@ void experiment(std::string name, int max_it = 1000, int tests = 10) {
 
 	auto data = BenchTimer::data;
 	BenchTimer::clear_data();
-	if(data.empty()) return;
+	if(data.empty()) return ;
 	for(size_t i = 0; i < data.size(); ++i) {
 		std::cout << name << ": " 
 				<< (i+1) * 100 << " iter, "
@@ -348,7 +353,7 @@ int main()
 	// experiment<rvector, int>("rvector<int>", 2000);
 	// experiment<std::vector, int>("std::vector<int>", 2000);
 	// experiment<folly::fbvector, int>("folly::fbvector<int>", 2000);
-	// experiment<boost_vector, int>("boost_vector<int>", 2000);
+	// // experiment<boost_vector, int>("boost_vector<int>", 2000);
 	// experiment<eastl::vector, int>("eastl::vector<int>", 2000);
 	
 	// experiment<rvector, TestType>("rvector<TestType>");
@@ -360,12 +365,12 @@ int main()
 	// experiment<rvector, std::array<int, 10>>("rvector<std::array<int,10>>");
 	// experiment<std::vector, std::array<int, 10>>("std::vector<std::array<int,10>>");
 	// experiment<folly::fbvector,  std::array<int, 10>>("folly::fbvector<std::array<int,10>>");
-	// experiment<boost_vector,  std::array<int, 10>>("boost_vector<std::array<int,10>>");
+	// // experiment<boost_vector,  std::array<int, 10>>("boost_vector<std::array<int,10>>");
 	// experiment<eastl::vector,  std::array<int, 10>>("eastl::vector<std::array<int,10>>");
 	
-	// experiment<rvector, std::string, int, std::array<int, 10>>("rvector<std::string, int, std::array<int,10>>", 800);
-	// experiment<std::vector, std::string, int, std::array<int, 10>>("std::vector<std::string, int, std::array<int,10>>", 800);
-	// experiment<folly::fbvector, std::string, int, std::array<int, 10>>("folly::fbvector<std::string, int, std::array<int,10>>", 800);
-	// experiment<boost_vector, std::string, int, std::array<int, 10>>("boost_vector<std::string, int, std::array<int,10>>", 800);
-	// experiment<eastl::vector, std::string, int, std::array<int, 10>>("eastl::vector<std::string, int, std::array<int,10>>", 800);
+	experiment<rvector, std::string, int, std::array<int, 10>>("rvector<std::string, int, std::array<int,10>>", 800);
+	experiment<std::vector, std::string, int, std::array<int, 10>>("std::vector<std::string, int, std::array<int,10>>", 800);
+	experiment<folly::fbvector, std::string, int, std::array<int, 10>>("folly::fbvector<std::string, int, std::array<int,10>>", 800);
+	experiment<boost_vector, std::string, int, std::array<int, 10>>("boost_vector<std::string, int, std::array<int,10>>", 800);
+	experiment<eastl::vector, std::string, int, std::array<int, 10>>("eastl::vector<std::string, int, std::array<int,10>>", 800);
 }

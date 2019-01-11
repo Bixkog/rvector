@@ -5,7 +5,7 @@
 \documentclass[inz, english, shortabstract]{iithesis}
 
 \usepackage[utf8]{inputenc}
-\usepackage{listings}
+\usepackage{listings, multicol}
 \usepackage{enumitem}
 \usepackage{amsmath}
 \usepackage{graphicx}
@@ -189,35 +189,53 @@ size_type fix_capacity(size_type n) {
 \end{lstlisting}
 Each public function have been unit tested, using gtest library\cite{rvector_tests}. Tests are run with few different object types, with one of them being custom {\it TestType} designed to check correctness of object creation and destruction in {\it rvector}.
 
-\begin{lstlisting}[caption=TestType]
-struct TestType {
-	int n;
-	int* p;
-	static int aliveObjects;
+\begin{lstlisting}[caption=TestType, multicols=2, label=TestType_impl]
+struct TestType
+{
+int n;
+int* p;
+static int aliveObjects;
 
-	TestType(int a = 5, int b = 1)
-	: n(a),
-	p(new int(b)) {
-		aliveObjects++;
-	}
+TestType(int a = 5, 
+		 int b = 1) noexcept
+: n(a),
+p(new int(b)) {
+	aliveObjects++;
+}
 
-	TestType(const TestType& other)
-	: n(other.n),
-	p(new int(*other.p)) {
-		aliveObjects++;
-	}
+TestType(const TestType& other) noexcept
+: n(other.n),
+p(new int(*other.p)) {
+	aliveObjects++;
+}
 
-	~TestType() {
-		delete p;
-		aliveObjects--;
-	}
+TestType(TestType&& other) noexcept
+: n(other.n),
+p(other.p) {
+	aliveObjects++;
+	other.p = nullptr;
+}
 
-	TestType& operator = (const TestType& other) {
-		n = other.n;
-		*p = *other.p;
-		return *this;
-	}
-	...
+~TestType() {
+	delete p;
+	aliveObjects--;
+}
+
+TestType& operator = 
+	(const TestType& other) noexcept {
+	n = other.n;
+	if(!p) p = new int();
+	*p = *other.p;
+	return *this;
+}
+
+TestType& operator = 
+	(TestType&& other) noexcept {
+	n = other.n;
+	std::swap(p, other.p);
+	return *this;
+}
+...
 };
 \end{lstlisting}
 Tests consider trivially and nontrivially moveable types, and small (malloc allocations) and big (mmap allocations) sizes, to check all branches of {\it rvector} memory handling.
@@ -388,6 +406,75 @@ It turns out that {\it folly::fbvector} and {\it boost::container::vector} imple
 \end{figure}
 
 Because all vector implementation got similar results on erase and insert action results, overall score is mainly influenced by push\_back and pop\_back action.
+
+\section{Element type: std::array}
+In order to benchmark vectors on big and trivial objects, I have used as \lstinline{std::array<int, 10>} element type. Main difference between \lstinline{std::array<int, 10>} and \lstinline{int} benchmarks, are those on push\_back action. As it can be seen on Figure \ref{array_push_back}, {\it rvector} did all push\_back operations in 42 seconds, yet runner-up {\it eastl::vector} did them in 56 seconds. Reallocation using {\it mremap} are much faster for big memory blocks. Figure \ref{array_simulation} shows total simulation time for \lstinline{std::array<int, 10>} element type.
+
+\begin{figure}[h!]
+\caption{Push\_back operation time for element type \lstinline{std::array<int, 10>}}
+\label{array_push_back}
+\includegraphics{plots/std::array<int,10>_push_back}
+\end{figure}
+
+\begin{figure}[h!]
+\caption{Total simulation time for element type \lstinline{std::array<int, 10>}}
+\label{array_simulation}
+\includegraphics{plots/std::array<int,10>_Simulation}
+\end{figure}
+
+\clearpage
+\section{Element type: TestType}
+TestType class have been defined in Listing \ref{TestType_impl}. It is not trivial and its move constructor is significantly faster than copy constructor, as it does not allocate memory. In this benchmark  {\it rvector} will try to expand memory in place using {\it mremap} without MREMAP\_MAYMOVE flag. On the one hand, fast reallocation will not occur always, as it did with trivial types. On the other hand, normal reallocations are more expensive, because objects must be moved with their move or copy constructors, not with simple {\it memcpy}.
+
+\begin{figure}[h!]
+\caption{Push\_back action time for element type \lstinline{TestType}}
+\label{TestType_push_back}
+\includegraphics{plots/TestType_Simulation}
+\end{figure}
+
+It turns out that gain from {\it mremap} is not as significant as for \lstinline{std::array<int, 10>}, yet it is getting greater, when larger memory blocks are reallocated. Results for insert action can be seen on Figure \ref{TestType_insert}. 
+\\
+
+
+As for construct action, {\it rvector} got much worse results that all other vectors. Using a profiler I found out that {\it malloc} functions called by {\it rvector} needed around 60\% more CPU cycles to finish than for {\it std::vector} calls. On the other hand {\it rvector} did significantly better on copy action. I assumed that such behaviour must be connected with use of {\it mmap}. To test this hypothesis I benchmarked {\it rvector} with {\it mmap/mremap} optimization turned off. Results of construct and copy action on such setup can be seen of Figures \ref{TestType_construct_malloc} and \ref{TestType_copy_malloc} respectively. 
+\begin{figure}[h!]
+\caption{Push\_back action time for element type \lstinline{TestType}}
+\label{TestType_push_back}
+\includegraphics{plots/TestType_push_back}
+\end{figure}
+
+\begin{figure}[h!]
+\caption{Insert action time for element type \lstinline{TestType}}
+\label{TestType_insert}
+\includegraphics{plots/TestType_insert}
+\end{figure}
+
+\begin{figure}[h!]
+\caption{Construct action time for element type \lstinline{TestType}}
+\label{TestType_construct}
+\includegraphics{plots/TestType_construct}
+\end{figure}
+
+\begin{figure}[h!]
+\caption{Copy action time for element type \lstinline{TestType}}
+\label{TestType_copy}
+\includegraphics{plots/TestType_copy}
+\end{figure}
+
+
+\begin{figure}[h!]
+\caption{Construct action time for element type \lstinline{TestType}. {\it Rvector} without {\it mmap}}
+\label{TestType_construct_malloc}
+\includegraphics{plots/TestType_construct_malloc}
+\end{figure}
+
+\begin{figure}[h!]
+\caption{Copy action time for element type \lstinline{TestType}. {\it Rvector} without {\it mmap}}
+\label{TestType_copy_malloc}
+\includegraphics{plots/TestType_copy_malloc}
+\end{figure}
+
+
 
 %%%%% BIBLIOGRAFIA
 \begin{thebibliography}{1}

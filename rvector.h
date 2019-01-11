@@ -649,7 +649,7 @@ rvector<T>::insert(rvector<T>::iterator position, size_type n, const T& x)
     if(length_ + n > capacity_)
     {
         auto m = std::distance(begin(), position);
-        size_type new_cap = std::max(length_ + n, capacity_ * 2 + 1);
+        size_type new_cap = std::max(length_ + n, capacity_ * 2);
         mm::change_capacity(data_, length_, capacity_, new_cap);
         position = begin() + m;
     }
@@ -678,7 +678,7 @@ rvector<T>::insert (rvector<T>::iterator position, InputIterator first,
     if(length_ + n > capacity_)
     {
         auto m = std::distance(begin(), position);
-        size_type new_cap = std::max(length_ + n, capacity_ * 2 + 1);
+        size_type new_cap = std::max(length_ + n, capacity_ * 2);
         mm::change_capacity(data_, length_, capacity_, new_cap);
         position = begin() + m;
     }
@@ -707,7 +707,7 @@ rvector<T>::insert(rvector<T>::iterator position, std::initializer_list<T> ilist
     if(length_ + n > capacity_)
     {
         auto m = std::distance(begin(), position);
-        size_type new_cap = std::max(length_ + n, capacity_ * 2 + 1);
+        size_type new_cap = std::max(length_ + n, capacity_ * 2);
         mm::change_capacity(data_, length_, capacity_, new_cap);
         position = begin() + m;  
     }
