@@ -63,7 +63,7 @@ public:
 	~rvector();
 
 	rvector& operator =(const rvector& other);
-	rvector& operator =(rvector&& other);
+	rvector& operator =(rvector&& other) noexcept;
 	rvector& operator =(std::initializer_list<T> ilist);
 
 	void assign(size_type count, const T& value);
@@ -340,7 +340,7 @@ rvector<T>& rvector<T>::operator=(const rvector<T>& other)
 }
 
 template <typename T>
-rvector<T>& rvector<T>::operator=(rvector<T>&& other)
+rvector<T>& rvector<T>::operator=(rvector<T>&& other) noexcept
 {
     std::swap(data_, other.data_);
     std::swap(length_, other.length_);
