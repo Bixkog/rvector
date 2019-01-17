@@ -187,7 +187,7 @@ size_type fix_capacity(size_type n) {
     return map_threshold<T> * (n/map_threshold<T> + 1);
 }
 \end{lstlisting}
-Each public function have been unit tested, using gtest library\cite{rvector_tests}. Tests are run with few different object types, with one of them being custom {\it TestType} designed to check correctness of object creation and destruction in {\it rvector}.
+Each public function have been unit tested, using {\it gtest} library\cite{rvector_tests}. Tests are run with few different object types, with one of them being custom {\it TestType} designed to check correctness of object creation and destruction in {\it rvector}.
 
 \begin{lstlisting}[caption=TestType, multicols=2, label=TestType_impl]
 struct TestType
@@ -350,15 +350,15 @@ void experiment(std::string name,
 For each tested vector implementation I have run experiment function with few different element types (Ts...). 
 
 \begin{figure}[h!]
-\label{space_consumption}
 \includegraphics{plots/capacity_<std::string,int,std::array<int,10>>}
 \caption{Needed space for element types \lstinline{int, std::string, std::array<int, 10>} [bytes].}
+\label{space_consumption}
 \end{figure}
 
 \begin{figure}[h!]
-\label{vector_length}
 \includegraphics{plots/length_<std::string,int,std::array<int,10>>}
 \caption{Maximum vector length for element types \lstinline{int, std::string, std::array<int, 10>} [bytes].}
+\label{vector_length}
 \end{figure}
 
 
@@ -386,39 +386,39 @@ During this benchmark, all element types will be tested at the same time. Size o
 Integer is one of tested element types to check how efficient vector is for trivial, small objects. Benchmarks have shown that {\it std::vector} with simple implementation containing intrinsic operations did much better than more complex ones. 
 
 \begin{figure}[h!]
-\label{int_pop_back}
 \includegraphics{plots/int_pop_back}
 \caption{Pop\_back action time for element type \lstinline{int}.}
+\label{int_pop_back}
 \end{figure}
 
 It turns out that {\it folly::fbvector} and {\it boost::container::vector} implementation of pop\_back checks whether object is trivially destructible at runtime instead of at compilation time. Results of pop\_back action benchmark \ref{int_pop_back} show that branching at pop\_back makes it much slower.
 
 \begin{figure}[h!]
-\label{int_copy}
 \includegraphics{plots/int_copy}
 \caption{Copy action time for element type \lstinline{int}.}
+\label{int_copy}
 \end{figure}
 
 \begin{figure}[h!]
-\label{int_copy_constrained}
 \includegraphics{plots/int_copy_constrained}
 \caption{Copy action time for element type \lstinline{int} with size constrained to 100.}
+\label{int_copy_constrained}
 \end{figure}
 
 {\it Rvector} falls behind other implementation at copy action benchmark as it can be seen at Figure \ref{int_copy}. As for \lstinline{int} element type (and all other trivially copyable types), copy constructor is equivalent to single allocation and {\it memcpy}. During benchmarks {\it rvector} mainly uses {\it mmap} to allocate memory block for copy, which is much slower that allocation with other memory managers. Figure \ref{int_copy_constrained} shows that {\it rvector} is as fast as other vectors when it does not use {\it mmap} to allocate memory for copy, because size of copy is constrained to 400 bytes.
 
 \begin{figure}[h!]
-\label{int_push_back}
 \includegraphics{plots/int_push_back}
 \caption{Push\_back operation time for element type \lstinline{int}.}
+\label{int_push_back}
 \end{figure}
 
 {\it Rvector} did better that other vectors at push\_back action benchmark, yet difference is not as big as for other element types. Because vectors did not operate on big memory blocks, even at large number of elements, reallocation optimizations did not induce much speed up.
 
 \begin{figure}[h!]
-\label{int_simulation}
 \includegraphics{plots/int_Simulation}
 \caption{Total simulation time for element type \lstinline{int}.}
+\label{int_simulation}
 \end{figure}
 
 Because all vector implementation got similar results on erase and insert action results, overall score is mainly influenced by push\_back and pop\_back action.
@@ -427,15 +427,21 @@ Because all vector implementation got similar results on erase and insert action
 In order to benchmark vectors on big and trivial objects, I have used as \lstinline{std::array<int, 10>} element type. Main difference between \lstinline{std::array<int, 10>} and \lstinline{int} benchmarks, are those on push\_back action. As it can be seen on Figure \ref{array_push_back}, {\it rvector} did all push\_back operations in 42 seconds, yet runner-up {\it eastl::vector} did them in 56 seconds. Reallocation using {\it mremap} are much faster for big memory blocks. Figure \ref{array_simulation} shows total simulation time for \lstinline{std::array<int, 10>} element type.
 
 \begin{figure}[h!]
-\label{array_push_back}
 \includegraphics{plots/std::array<int,10>_push_back}
 \caption{Push\_back operation time for element type \lstinline{std::array<int, 10>}.}
+\label{array_push_back}
 \end{figure}
 
 \begin{figure}[h!]
-\label{array_simulation}
+\includegraphics{plots/std::array<int,10>_insert}
+\caption{Insert operation time for element type \lstinline{std::array<int, 10>}.}
+\label{array_insert}
+\end{figure}
+
+\begin{figure}[h!]
 \includegraphics{plots/std::array<int,10>_Simulation}
 \caption{Total simulation time for element type \lstinline{std::array<int, 10>}.}
+\label{array_simulation}
 \end{figure}
 
 \clearpage
@@ -443,9 +449,9 @@ In order to benchmark vectors on big and trivial objects, I have used as \lstinl
 TestType class have been defined in Listing \ref{TestType_impl}. It is not trivial and its move constructor is significantly faster than copy constructor, as it does not allocate memory. In this benchmark  {\it rvector} will try to expand memory in place using {\it mremap} without MREMAP\_MAYMOVE flag. On the one hand, fast reallocation will not occur always, as it did with trivial types. On the other hand, normal reallocations are more expensive, because objects must be moved with their move or copy constructors, not with simple {\it memcpy}.
 
 \begin{figure}[h!]
-\label{TestType_push_back}
 \includegraphics{plots/TestType_Simulation}
 \caption{Total simulation time for element type \lstinline{TestType}.}
+\label{TestType_push_back}
 \end{figure}
 
 It turns out that gain from {\it mremap} is not as significant as for \lstinline{std::array<int, 10>}, yet it is getting greater, when larger memory blocks are reallocated. Results for insert action can be seen on Figure \ref{TestType_insert}. 
@@ -455,80 +461,94 @@ It turns out that gain from {\it mremap} is not as significant as for \lstinline
 As for construct action, {\it rvector} got much worse results that all other vectors. Using a profiler I found out that {\it malloc} functions called by {\it rvector} needed around 60\% more CPU cycles to finish than for {\it std::vector} calls. On the other hand {\it rvector} did significantly better on copy action. I assumed that such behavior must be connected with use of {\it mmap}. To test this hypothesis I benchmarked {\it rvector} with {\it mmap/mremap} optimization turned off. Results of construct and copy action on such setup can be seen of Figures \ref{TestType_construct_malloc} and \ref{TestType_copy_malloc} respectively.
 
 \begin{figure}[h!]
-\label{TestType_push_back}
 \includegraphics{plots/TestType_push_back}
 \caption{Push\_back action time for element type \lstinline{TestType}.}
+\label{TestType_push_back}
 \end{figure}
 
 \begin{figure}[h!]
-\label{TestType_insert}
 \includegraphics{plots/TestType_insert}
 \caption{Insert action time for element type \lstinline{TestType}.}
+\label{TestType_insert}
 \end{figure}
 
 \begin{figure}[h!]
-\label{TestType_construct}
 \includegraphics{plots/TestType_construct}
 \caption{Construct action time for element type \lstinline{TestType}.}
+\label{TestType_construct}
 \end{figure}
 
 \begin{figure}[h!]
-\label{TestType_copy}
 \includegraphics{plots/TestType_copy}
 \caption{Copy action time for element type \lstinline{TestType}.}
+\label{TestType_copy}
 \end{figure}
 
 
 \begin{figure}[h!]
-\label{TestType_construct_malloc}
 \includegraphics{plots/TestType_construct_malloc}
 \caption{Construct action time for element type \lstinline{TestType}. {\it Rvector} without {\it mmap}.}
+\label{TestType_construct_malloc}
 \end{figure}
 
 \begin{figure}[h!]
-\label{TestType_copy_malloc}
 \includegraphics{plots/TestType_copy_malloc}
 \caption{Copy action time for element type \lstinline{TestType}. {\it Rvector} without {\it mmap}.}
+\label{TestType_copy_malloc}
 \end{figure}
 
 \section{Element types: std::string, int, std::array}
 In this benchmark 3 different element types has been tested at the same moment. It makes this benchmark the most computational heavy and memory consuming of all benchmarks presented in this paper. Single simulation in a peak moment had a working space of around 14GB. As it is more than available physical memory,  simulation show results of vector during {\it throttling}.
 
 \begin{figure}[h!]
-\label{general_simulation}
 \includegraphics{plots/general_Simulation}
 \caption{Total simulation time for element types \lstinline{std::string, int, std::array}.}
+\label{general_simulation}
 \end{figure}
 
-As it can be seen of Figure \ref{general_simulation}, {\it rvector} gets significant advantage over other vector implementations. Every action except construct is done faster with {\it rvector}, which can be seen on the plots below. It is worth noting that even such actions as erase and pop\_back, that do not induce reallocation, took less time to execute with use of {\it rvector}. 
+As it can be seen on Figure \ref{general_simulation}, {\it rvector} gets significant advantage over other vector implementations. Every action except construct is done faster with {\it rvector}, which can be seen on the plots below. It is worth noting that even such actions as erase and pop\_back, that do not induce reallocation, took less time to execute with use of {\it rvector}. 
 
 \begin{figure}[h!]
-\label{general_push_back}
 \includegraphics{plots/general_push_back}
 \caption{Push\_back action time for element types \lstinline{std::string, int, std::array}.}
+\label{general_push_back}
 \end{figure}
 
 \begin{figure}[h!]
-\label{general_copy}
 \includegraphics{plots/general_copy}
 \caption{Copy action time for element types \lstinline{std::string, int, std::array}.}
+\label{general_copy}
 \end{figure}
 
 \begin{figure}[h!]
-\label{general_erase}
 \includegraphics{plots/general_erase}
 \caption{Erase action time for element types \lstinline{std::string, int, std::array}.}
+\label{general_erase}
 \end{figure}
 
 \begin{figure}[h!]
-\label{general_construct}
 \includegraphics{plots/general_construct}
 \caption{Construct action time for element types \lstinline{std::string, int, std::array}.}
+\label{general_construct}
 \end{figure}
 
 \chapter{Conclusions}
 Considering results from benchmarks on small and large POD types, one can conclude that gain from using {\it mremap} as reallocation is more significant with greater memory block to be reallocated. It also the case for non-POD types, yet advantage is drastically lower. Surprisingly {\it rvector} turned out to be much more effective when memory resources are running low. It is also worth noting that even though {\it rvector} has much simpler implementation than other considered vectors, it did not fall greatly behind on benchmark when it's main optimizations were turned off.
-
+\\
+As a summary, here are features and advantages of {\it rvector}:
+\begin{itemize}
+\item Much faster reallocation when element type is POD, which is helpful for heavy use of push\_back or insert.
+\item For non-POD types {\it mremap} in place still speeds up reallocation, yet not as much as it does for POD type.
+\item {\it Rvector} outperforms other vector implementations during throttling
+\item Very simple implementation, which yet requires C++17.
+\item No dependencies, but it is implemented only for Linux based systems as it explicitly uses {\it mmap, mremap} and{\it munmap} syscalls.
+\item Additional methods:
+	\begin{itemize}
+	\item fast\_push\_back, fast\_emplace\_back - does not check capacity bound. Can be used in {\it reserve, fill} pattern.
+	\item safe\_pop\_back - pop\_back which check if target vector is empty, if so, does nothing.
+	\end{itemize}
+\item Compliant with C++17 {\it std::vector} interface, including deduction guides for constructors.
+\end{itemize}
 
 %%%%% BIBLIOGRAFIA
 \begin{thebibliography}{1}
