@@ -4,7 +4,7 @@
 struct TestType
 {
 	int n;
-	int* p;
+	int* p;	
 	static int aliveObjects;
 
 	TestType(int a = 5, int b = 1) noexcept

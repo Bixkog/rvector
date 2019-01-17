@@ -116,7 +116,6 @@ public:
 			BenchTimer bt("Simulation");
 			(dispatch_action<Ts>(), ...);
 			if((i + 1) % 100 == 0) {
-				BenchTimer::durations["length"] = GetAverageLength();
 				BenchTimer::save_epoch(i / 100);
 			}
 		}
@@ -318,12 +317,11 @@ private:
 };
 
 template <template<typename> typename V, typename... Ts>
-void experiment(std::string name, int max_it = 1000, int tests = 10) {
+void experiment(std::string name, int max_it = 1500, int tests = 10) {
 	BenchTimer::data.resize(max_it / 100);
 	for(int seed = 12345512; seed < 12345512 + tests; seed++) {
 		VectorEnv<V, Ts...> v_env(seed);
 		v_env.RunSimulation(max_it);
-		BenchTimer::print_data();
 		BenchTimer::clear();
 	}
 
@@ -365,27 +363,27 @@ using boost_vector = boost::container::vector<T, boost::container::new_allocator
 
 int main()
 {
-	// experiment<rvector, int>("rvector<int>", 2000);
-	// experiment<std::vector, int>("std::vector<int>", 2000);
-	// experiment<folly::fbvector, int>("folly::fbvector<int>", 2000);
-	// experiment<boost_vector, int>("boost_vector<int>", 2000);
-	// experiment<eastl::vector, int>("eastl::vector<int>", 2000);
+	experiment<rvector, int>("rvector<int>", 2000);
+	experiment<std::vector, int>("std::vector<int>", 2000);
+	experiment<folly::fbvector, int>("folly::fbvector<int>", 2000);
+	experiment<boost_vector, int>("boost_vector<int>", 2000);
+	experiment<eastl::vector, int>("eastl::vector<int>", 2000);
 	
-	// experiment<rvector, TestType>("rvector<TestType>");
-	// experiment<std::vector, TestType>("std::vector<TestType>");
-	// experiment<folly::fbvector, TestType>("folly::fbvector<TestType>");
-	// experiment<boost_vector, TestType>("boost_vector<TestType>");
-	// experiment<eastl::vector, TestType>("eastl::vector<TestType>");
+	experiment<rvector, TestType>("rvector<TestType>");
+	experiment<std::vector, TestType>("std::vector<TestType>");
+	experiment<folly::fbvector, TestType>("folly::fbvector<TestType>");
+	experiment<boost_vector, TestType>("boost_vector<TestType>");
+	experiment<eastl::vector, TestType>("eastl::vector<TestType>");
 	
-	// experiment<rvector, std::array<int, 10>>("rvector<std::array<int,10>>");
-	// experiment<std::vector, std::array<int, 10>>("std::vector<std::array<int,10>>");
-	// experiment<folly::fbvector,  std::array<int, 10>>("folly::fbvector<std::array<int,10>>");
-	// experiment<boost_vector,  std::array<int, 10>>("boost_vector<std::array<int,10>>");
-	// experiment<eastl::vector,  std::array<int, 10>>("eastl::vector<std::array<int,10>>");
+	experiment<rvector, std::array<int, 10>>("rvector<std::array<int,10>>");
+	experiment<std::vector, std::array<int, 10>>("std::vector<std::array<int,10>>");
+	experiment<folly::fbvector,  std::array<int, 10>>("folly::fbvector<std::array<int,10>>");
+	experiment<boost_vector,  std::array<int, 10>>("boost_vector<std::array<int,10>>");
+	experiment<eastl::vector,  std::array<int, 10>>("eastl::vector<std::array<int,10>>");
 	
-	// experiment<std::vector, std::string, int, std::array<int, 10>>("std::vector<std::string, int, std::array<int,10>>", 1000);
-	experiment<rvector, std::string, int, std::array<int, 10>>("rvector<std::string, int, std::array<int,10>>", 800);
-	// experiment<folly::fbvector, std::string, int, std::array<int, 10>>("folly::fbvector<std::string, int, std::array<int,10>>", 1000);
-	// experiment<boost_vector, std::string, int, std::array<int, 10>>("boost_vector<std::string, int, std::array<int,10>>", 500);
-	// experiment<eastl::vector, std::string, int, std::array<int, 10>>("eastl::vector<std::string, int, std::array<int,10>>", 500);
+	experiment<std::vector, std::string, int, std::array<int, 10>>("std::vector<std::string, int, std::array<int,10>>", 1000);
+	experiment<rvector, std::string, int, std::array<int, 10>>("rvector<std::string, int, std::array<int,10>>", 1000);
+	experiment<folly::fbvector, std::string, int, std::array<int, 10>>("folly::fbvector<std::string, int, std::array<int,10>>", 1000);
+	experiment<boost_vector, std::string, int, std::array<int, 10>>("boost_vector<std::string, int, std::array<int,10>>", 1000);
+	experiment<eastl::vector, std::string, int, std::array<int, 10>>("eastl::vector<std::string, int, std::array<int,10>>", 1000);
 }
