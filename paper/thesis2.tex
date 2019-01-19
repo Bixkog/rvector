@@ -98,20 +98,18 @@ A vector stores all objects in a contiguous memory block, which allows constant 
 \chapter{Common vector implementations}
 
 Despite that the vector idea is simple, there are several details that can affect its efficiency.
-Indeed, because it is so crucial data structure, a number of different implementations are used, believing that they behave better than the standard implementation.
+Indeed, because it is so crucial data structure, a number of different implementations are used, believing that they are more efficient than the standard implementation.
 
 \section{std::vector}
 The most common implementation is the standard one provided in STL.
-Although its technical details may be different in different C++ compilers, they generally follow the same pattern.
+Although its technical details may be differ among C++ compilers, they generally follow the same pattern.
 With the default allocator, all allocations are done with {\tt operator new} and deallocations with {\tt operator delete}. A reallocation is done using the scheme \emph{allocate, move, deallocate}, where \emph{allocate} and \emph{deallocate} phases are done by the given allocator. The growth factor is constant and equal to 2.
 
-\MSZ{*** Tu jestem}
-
 \section{folly::fbvector}
-{\tt Folly::fbvector}\cite{folly::fbvector_impl} is a part of \emph{folly} library developed by Facebook. It has a similar interface for the allocator to {\tt std::vector}, yet by default, it utilizes {\tt jemalloc} for allocations, deallocations and reallocations\cite{folly::fbvector_description}. It is worth noting that {\tt folly::fbvector} utilizes {\tt jemalloc xallocx} function, which tries to reallocate memory in place. Growth factor depends on the size of the current array. Initial growth is to at least 64 bytes, probably to fill whole cache line. For not in-place reallocations (small ones) and big memory blocks (at least 4096 * 32 bytes) \emph{growth factor} is equal 2. Otherwise, \emph{growth factor} is equal 1.5, as it allows to reuse previously allocated memory. {\tt Folly::fbvector} developers believe that such a strategy is more memory friendly and efficient\cite{folly::fbvector_description}. Additionally, {\tt folly::fbvector} uses {\tt memcpy} to move objects with type decorated by {\tt folly::IsRelocatable}.
+{\tt Folly::fbvector}\cite{folly::fbvector_impl} is a part of \emph{folly} library developed by Facebook. It has a similar interface for the allocator to {\tt std::vector}, yet by default, it utilizes {\tt jemalloc} for allocations, deallocations and reallocations\cite{folly::fbvector_description}. It is worth noting that {\tt folly::fbvector} utilizes {\tt jemallocs xallocx} function, which tries to reallocate memory in place. Growth factor depends on the size of the current array. Initial growth is to at least 64 bytes, probably to fill whole cache line. For not in-place reallocations (small ones) and big memory blocks (at least 4096 * 32 bytes) \emph{growth factor} is equal to 2. Otherwise, \emph{growth factor} is equal to 1.5, as it allows to reuse previously allocated memory. {\tt Folly::fbvector} developers believe that such a strategy is more memory friendly and efficient\cite{folly::fbvector_description}. Additionally, {\tt folly::fbvector} uses {\tt memcpy} to move objects with type decorated with {\tt folly::IsRelocatable}.
 
 \section{boost::container::vector}
-{\tt Boost::container::vector}\cite{boost::container::vector_impl} is the least specialized version of vector in {\tt boost::container}. It has lower exception guarantees in order to improve the performance of container\cite{boost_exceptions}. As a default allocator, it uses boost version of {\tt dlmalloc}\cite{dlmalloc}, which allows expanding memory block forward as well as backward. To achieve this, allocator stores chain of allocations instead of single allocation block. \emph{Growth factor} by default is equal to 1.5, but it is possible to change its value at compilation time. In my opinion {\tt boost::container::vector} has the most complex implementation out of those presented in this chapter.
+{\tt Boost::container::vector}\cite{boost::container::vector_impl} is the least specialized version of vector in {\tt boost::container}. It has lower exception guarantees in order to improve the performance of container\cite{boost_exceptions}. As a default allocator, it uses boost version of {\tt dlmalloc}\cite{dlmalloc}, which allows expanding memory block forward as well as backward. To achieve this, allocator stores chain of allocations instead of single allocation block. \emph{Growth factor} by default is equal to 1.5, but it is possible to change its value at compilation time. In my opinion {\tt boost::container::vector} has the most complex implementation out of all vectors considered in this chapter.
 
 \section{eastl::vector}
 {\tt Eastl::vector}\cite{eastl::vector_impl} is part of the Electronic Arts Standard Template Library (EASTL) developed by Electronic Arts company. EASTL was designed especially as a game development library. It is considered to be more suited for console platforms\cite{eastl_faq} than other STL implementations. Default allocator in EASTL requires from user to define a global {\tt eastl} version of {\tt operator new} that would be used for allocations. {\it Eastl::vector} implementation is simple and similar to {\tt std::vector} one, it also utilizes \emph{allocate, move, deallocate} scheme. Yet it contains only EASTL version of STL functions. The \emph{growth factor} is constant and is equal to 2.  
@@ -143,7 +141,7 @@ template<typename T, typename R = void>
 using NT_Move = std::enable_if_t<
 				!std::is_trivially_move_constructible<T>::value, R>;
 \end{lstlisting}
-{\tt Rvector} uses {\tt mremap} in two different ways. For trivially movable types, MREMAP\_MAYMOVE flag is passed, which allows {\tt mremap} to reallocate memory block to other address. Because it {\tt mremap} does reallocation by changing page table mapping from virtual address to memory page\cite{mremap}, it is done in constant time, and thanks to MREMAP\_MAYMOVE flag this reallocation is always successful. 
+{\tt Rvector} uses {\tt mremap} in two different ways. For trivially movable types, MREMAP\_MAYMOVE flag is passed, which allows {\tt mremap} to reallocate memory block to other address. Because {\tt mremap} does reallocation by changing page table mapping from virtual address to memory page\cite{mremap}, it is done in constant time, and thanks to MREMAP\_MAYMOVE flag this reallocation is always successful. 
 
 \begin{lstlisting}[caption=rvector trivial type reallocation]
 template<typename T>
@@ -167,7 +165,7 @@ T_Move<T, T*> realloc_(T* data,
     }
 }
 \end{lstlisting}
-For non-trivially movable types, MREMAP\_MAYMOVE cannot be used. Without this flag, {\tt mremap} tries to expand memory block in place. This operation will fail when there is not enough space in front of the provided address. In that case, standard reallocation is done.
+For non-trivially movable types, MREMAP\_MAYMOVE cannot be used. Without this flag, {\tt mremap} tries to expand memory block in-place. This operation will fail when there is not enough free space in front of the provided address. In that case, standard reallocation is done.
 
 \begin{lstlisting}[caption=rvector nontrivial type reallocation]
 template<typename T>
@@ -188,7 +186,7 @@ NT_Move<T, T*> realloc_(T* data,
     return new_data;
 }
 \end{lstlisting}
-The \emph{growth factor} is equal to 2. Allocation size is also fixed by such function: 
+The \emph{growth factor} is equal to 2. Allocation size is also fixed with such function: 
 
 \begin{lstlisting}[caption=fix capacity]
 template <typename T>
@@ -265,7 +263,7 @@ template <template<typename> typename V, typename... Ts>
 class VectorEnv;
 \end{lstlisting}
 For given container type {\tt V} (e.g. {\tt std::vector, rvector}) and element types {\tt Ts}, it creates 
-\lstinline{std::tuple<V<V<Ts>>...> env}
+{\tt std::tuple<V<V<Ts>>...> env}
 will contain all vectors created during benchmark. 
 With created environment simulation can be run for a given number of iterations.
 At each iteration, for each element type, random action is dispatched.
@@ -279,7 +277,6 @@ void RunSimulation(int iter = 1000) {
 \end{lstlisting}
 To gather time data, I have used custom class {\tt BenchTimer}, where objects of that type utilize RAI pattern to record time spent in their scope.
 
-\clearpage
 \section{Simulation actions}
 \begin{itemize}
 \item [construct action]
@@ -353,8 +350,8 @@ void experiment(std::string name,
 		VectorEnv<V, Ts...> v_env(seed);
 		v_env.RunSimulation(max_it);
 	}
-		// data gathering and saving
-		...
+	// data gathering and saving
+	...
 }
 \end{lstlisting}
 For each tested vector implementation I have run experiment function with few different element types ({\it Ts}). 
@@ -376,7 +373,7 @@ As can be seen in Figure \ref{space_consumption} average number of bytes needed 
 
 \chapter{Benchmarks results}
 
-I have benchmarked {\tt std::vector, rvector, folly::fbvector, boost::container::vector, eastl::vector} using my {\tt VectorEnv} framework. All vectors had growth factor equal 2, except {\tt folly::fbvector} which has custom \emph{growth factor}. I have done experiments for each of those with such element types:
+I have benchmarked {\tt std::vector, rvector, folly::fbvector, boost::container::vector, eastl::vector} using my {\tt VectorEnv} framework. All vectors had growth factor equal to 2, except {\tt folly::fbvector} which has custom \emph{growth factor}. I have done experiments for each of those with such element types:
 \begin{itemize}
 \item \lstinline{int}
 \\
@@ -431,10 +428,10 @@ It turns out that {\it folly::fbvector} and {\it boost::container::vector} imple
 \label{int_simulation}
 \end{figure}
 
-Because all vector implementation got similar results on erase and insert action results, the overall score is mainly influenced by push\_back and pop\_back action.
+Because all vector implementations got similar results on erase and insert action results, the overall score is mainly influenced by push\_back and pop\_back action.
 \clearpage
 \section{Element type: std::array}
-In order to benchmark vectors on big and trivial objects, I have used as \lstinline{std::array<int, 10>} element type. As it can be seen in Figure \ref{array_push_back}, {\tt rvector} did all push\_back operations in 313 seconds, yet runner-up {\tt folly::fbvector} did them in 707 seconds. Reallocations using {\tt mremap} are much faster for big memory blocks. Figure \ref{array_simulation} shows total simulation time for \lstinline{std::array<int, 10>} element type. Other operations benchmarks results indicate that {\tt rvector} is much more efficient when operating on large memory blocks and during {throttling}, which occurs during this test. Such behavior can be also seen for other element types.
+In order to benchmark vectors on big and trivial objects, I have used \lstinline{std::array<int, 10>} as element type. As it can be seen in Figure \ref{array_push_back}, {\tt rvector} did all push\_back operations in 313 seconds, yet runner-up {\tt folly::fbvector} did them in 707 seconds. Reallocations using {\tt mremap} are much faster for big memory blocks. Figure \ref{array_simulation} shows total simulation time for \lstinline{std::array<int, 10>} element type. Other operations benchmarks results indicate that {\tt rvector} is much more efficient when operating on large memory blocks and during {throttling}, which occurs during this test. Such behavior can be also seen for other element types.
 
 \begin{figure}[h!]
 \includegraphics{plots/std::array<int,10>_push_back}
@@ -519,7 +516,7 @@ As for construct action, {\tt rvector} got much worse results than all other vec
 
 \clearpage
 \section{Element types: std::string, int, std::array}
-In this benchmark, 3 different element types have been tested at the same moment. It makes this benchmark the most computational heavy and memory consuming of all benchmarks presented in this paper. Single simulation in a peak moment had a working space of around 14GB. As it is more than available physical memory,  the simulation shows efficiency of vectors during \emph{throttling}.
+In this benchmark, 3 different element types have been tested at the same moment. It makes this benchmark the most computational heavy and memory consuming of all benchmarks presented in this paper. Single simulation in a peak moment had a working set of around 14GB. As it is more than available physical memory,  the simulation shows efficiency of vectors during \emph{throttling}.
 
 \begin{figure}[h!]
 \includegraphics{plots/general_Simulation}
@@ -574,7 +571,7 @@ As a summary, here are features and advantages of {\tt rvector}:
 \item For non-POD types {\tt mremap} in place still speeds up reallocation, yet not as much as it does for POD type.
 \item {\tt Rvector} outperforms other vector implementations during throttling
 \item Very simple implementation, which yet requires C++17.
-\item No dependencies, but it is implemented only for Linux-based systems as it explicitly uses {\tt mmap, mremap} and {\tt munmap} syscalls.
+\item No dependencies, uses a standard allocator, but it is implemented only for Linux-based systems as it explicitly uses {\tt mmap, mremap} and {\tt munmap} syscalls.
 \item Additional methods:
 	\begin{itemize}
 	\item {\tt fast\_push\_back, fast\_emplace\_back} - does not check capacity bound. Can be used in \emph{reserve, fill} pattern.
