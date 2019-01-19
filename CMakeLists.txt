@@ -13,7 +13,7 @@ set(BENCHMARK_ENABLE_TESTING OFF CACHE BOOL "Suppressing benchmark's tests" FORC
 add_subdirectory(vendor/google/benchmark)
 
 # build tests (targets: gmock_main, gtest)
-add_subdirectory(vendor/google/googletest/googlemock)
+add_subdirectory(vendor/google/googlemock)
 
 add_executable(runUnitTests
     src/test.cpp
