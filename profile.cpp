@@ -334,7 +334,7 @@ void experiment(std::string name, int max_it = 1500, int tests = 10) {
 				<< data[i]["Simulation"] << "s" << std::endl;
 	}
 
-	std::ofstream out("data/" + name + ".csv");
+	std::ofstream out("data/additional/" + name + ".csv");
 
 	out << "iterations";
 	for(auto const& [k, v] : data[0]) {
@@ -364,26 +364,26 @@ using boost_vector = boost::container::vector<T, boost::container::new_allocator
 int main()
 {
 	experiment<rvector, int>("rvector<int>", 2000);
-	experiment<std::vector, int>("std::vector<int>", 2000);
-	experiment<folly::fbvector, int>("folly::fbvector<int>", 2000);
-	experiment<boost_vector, int>("boost_vector<int>", 2000);
-	experiment<eastl::vector, int>("eastl::vector<int>", 2000);
+	// experiment<std::vector, int>("std::vector<int>", 2000);
+	// experiment<folly::fbvector, int>("folly::fbvector<int>", 2000);
+	// experiment<boost_vector, int>("boost_vector<int>", 2000);
+	// experiment<eastl::vector, int>("eastl::vector<int>", 2000);
 	
-	experiment<rvector, TestType>("rvector<TestType>");
-	experiment<std::vector, TestType>("std::vector<TestType>");
-	experiment<folly::fbvector, TestType>("folly::fbvector<TestType>");
-	experiment<boost_vector, TestType>("boost_vector<TestType>");
-	experiment<eastl::vector, TestType>("eastl::vector<TestType>");
+	// experiment<rvector, TestType>("rvector<TestType>");
+	// experiment<std::vector, TestType>("std::vector<TestType>");
+	// experiment<folly::fbvector, TestType>("folly::fbvector<TestType>");
+	// experiment<boost_vector, TestType>("boost_vector<TestType>");
+	// experiment<eastl::vector, TestType>("eastl::vector<TestType>");
 	
-	experiment<rvector, std::array<int, 10>>("rvector<std::array<int,10>>");
-	experiment<std::vector, std::array<int, 10>>("std::vector<std::array<int,10>>");
-	experiment<folly::fbvector,  std::array<int, 10>>("folly::fbvector<std::array<int,10>>");
-	experiment<boost_vector,  std::array<int, 10>>("boost_vector<std::array<int,10>>");
-	experiment<eastl::vector,  std::array<int, 10>>("eastl::vector<std::array<int,10>>");
+	// experiment<rvector, std::array<int, 10>>("rvector<std::array<int,10>>");
+	// experiment<std::vector, std::array<int, 10>>("std::vector<std::array<int,10>>");
+	// experiment<folly::fbvector,  std::array<int, 10>>("folly::fbvector<std::array<int,10>>");
+	// experiment<boost_vector,  std::array<int, 10>>("boost_vector<std::array<int,10>>");
+	// experiment<eastl::vector,  std::array<int, 10>>("eastl::vector<std::array<int,10>>");
 	
-	experiment<std::vector, std::string, int, std::array<int, 10>>("std::vector<std::string, int, std::array<int,10>>", 1000);
-	experiment<rvector, std::string, int, std::array<int, 10>>("rvector<std::string, int, std::array<int,10>>", 1000);
-	experiment<folly::fbvector, std::string, int, std::array<int, 10>>("folly::fbvector<std::string, int, std::array<int,10>>", 1000);
-	experiment<boost_vector, std::string, int, std::array<int, 10>>("boost_vector<std::string, int, std::array<int,10>>", 1000);
-	experiment<eastl::vector, std::string, int, std::array<int, 10>>("eastl::vector<std::string, int, std::array<int,10>>", 1000);
+	// experiment<std::vector, std::string, int, std::array<int, 10>>("std::vector<std::string, int, std::array<int,10>>", 1000);
+	// experiment<rvector, std::string, int, std::array<int, 10>>("rvector<std::string, int, std::array<int,10>>", 1000);
+	// experiment<folly::fbvector, std::string, int, std::array<int, 10>>("folly::fbvector<std::string, int, std::array<int,10>>", 1000);
+	// experiment<boost_vector, std::string, int, std::array<int, 10>>("boost_vector<std::string, int, std::array<int,10>>", 1000);
+	// experiment<eastl::vector, std::string, int, std::array<int, 10>>("eastl::vector<std::string, int, std::array<int,10>>", 1000);
 }
