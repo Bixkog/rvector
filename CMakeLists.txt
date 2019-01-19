@@ -13,7 +13,7 @@ set(BENCHMARK_ENABLE_TESTING OFF CACHE BOOL "Suppressing benchmark's tests" FORC
 add_subdirectory(vendor/google/benchmark)
 
 # build tests (targets: gmock_main, gtest)
-add_subdirectory(vendor/google/googlemock)
+add_subdirectory(vendor/google/googletest/googletest)
 
 add_executable(runUnitTests
     src/test.cpp
@@ -36,7 +36,7 @@ add_executable(runProfile
     src/test_type.h
     src/test_type.cpp)
 
-target_link_libraries(runUnitTests gtest gmock_main pthread)
+target_link_libraries(runUnitTests gtest gtest_main pthread)
 target_link_libraries(runBenchmarks benchmark pthread)
 target_link_libraries(runProfile ${Boost_LIBRARIES} EASTL)
 
