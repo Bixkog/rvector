@@ -145,7 +145,7 @@ private:
 	size_type length_;
     size_type capacity_;
 public:
-    constexpr static size_t map_threshold = 4096 / sizeof(T);
+    constexpr static size_t map_threshold = 4096 * 100000 / sizeof(T);
 };
 
 template<typename T>

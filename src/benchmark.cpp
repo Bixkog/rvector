@@ -10,7 +10,6 @@
 #include "test_type.h"
 #include <folly/FBVector.h>
 #include <boost/container/vector.hpp>
-#include <boost/container/stable_vector.hpp>
 #include <EASTL/vector.h>
 #include <new>
 
@@ -137,7 +136,7 @@ private:
 	template <typename T>
 	void initVectors() {
 		auto& typed_env = std::get<V<V<T>>>(env);
-		typed_env.resize(5);
+		typed_env.resize(1);
 	}
 
 	template <typename T>
@@ -175,7 +174,7 @@ private:
 		std::uniform_int_distribution<> pick_dist(0, typed_env.size()-1);
 		std::uniform_int_distribution<> size_dist(1, 100000);
 		int q = q_dist(gen);
-		
+
 		BenchTimer bt("push_back");
 		while(q--) {
 			int pick = pick_dist(gen);
@@ -251,7 +250,7 @@ private:
 		}
 		std::uniform_int_distribution<> q_dist(1, typed_env.size() / 3 + 1);
 		std::uniform_int_distribution<> pick_dist(0, typed_env.size() - 1);
-		std::uniform_int_distribution<> size_dist(1, 100);
+		std::uniform_int_distribution<> size_dist(1, 1000);
 
 		int q = q_dist(gen);
 		
@@ -318,6 +317,7 @@ private:
 
 template <template<typename> typename V, typename... Ts>
 void experiment(std::string name, int max_it = 1500, int tests = 10) {
+	malloc_trim(0);
 	BenchTimer::data.resize(max_it / 100);
 	for(int seed = 12345512; seed < 12345512 + tests; seed++) {
 		VectorEnv<V, Ts...> v_env(seed);
@@ -361,24 +361,69 @@ using boost_options = boost::container::vector_options_t<boost::container::growt
 template<typename T>
 using boost_vector = boost::container::vector<T, boost::container::new_allocator<T>, boost_options>; 
 
+template <template<typename> typename V, typename T>
+void push_back_bench(std::string name, int it_count = 1000000000) {
+	BenchTimer::data.resize(6);
+	int e = 0;
+	for(int i = 1000; i < it_count; i *= 10) {
+		{
+			BenchTimer bt("push_back");
+			for(int t = 0; t < 10; t++) {
+				V<T> v;
+				for(int it = 0; it < i; it++)
+					v.emplace_back();
+			}
+		}
+		BenchTimer::save_epoch(e++);
+		BenchTimer::clear();
+	}
+	std::ofstream out("data/simple/" + name + ".csv");
+
+	out << "push_back_count,time" << std::endl;
+	auto data = BenchTimer::data;
+	for(size_t i = 0; i < data.size(); i++) {
+		auto& row = data[i];
+		size_t it = std::pow(10, (i+3));
+		out << it;
+		for(auto const& [k, v] : row) {
+			(void) k;
+			out << "," << v;
+		}
+		out << std::endl;
+	}
+	BenchTimer::clear_data();
+}
+
 int main()
 {
-	// experiment<rvector, int>("rvector<int>", 2000);
-	// experiment<std::vector, int>("std::vector<int>", 2000);
-	// experiment<folly::fbvector, int>("folly::fbvector<int>", 2000);
-	// experiment<boost_vector, int>("boost_vector<int>", 2000);
-	// experiment<eastl::vector, int>("eastl::vector<int>", 2000);
+	// push_back_bench<rvector, int>("rvector<int>");
+	// push_back_bench<std::vector, int>("std::vector<int>");
+	// push_back_bench<folly::fbvector, int>("folly::fbvector<int>");
+	// push_back_bench<eastl::vector, int>("eastl::vector<int>");
+	// push_back_bench<boost_vector, int>("boost_vector<int>");
+
+	// push_back_bench<rvector, std::string>("rvector");
+	// push_back_bench<std::vector, std::string>("std::vector");
+	// push_back_bench<folly::fbvector, std::string>("folly::fbvector");
+	// push_back_bench<eastl::vector, std::string>("eastl::vector");
+	// push_back_bench<boost_vector, std::string>("boost_vector");
+	// experiment<std::vector, int>("std::vector<int>", 1000);
+	// experiment<rvector, int>("rvector<int>", 1000);
+	// experiment<folly::fbvector, int>("folly::fbvector<int>", 5000);
+	// experiment<boost_vector, int>("boost_vector<int>", 5000);
+	// experiment<eastl::vector, int>("eastl::vector<int>", 5000);
 	
 	// experiment<rvector, TestType>("rvector<TestType>");
 	// experiment<std::vector, TestType>("std::vector<TestType>");
 	// experiment<folly::fbvector, TestType>("folly::fbvector<TestType>");
 	// experiment<boost_vector, TestType>("boost_vector<TestType>");
 	// experiment<eastl::vector, TestType>("eastl::vector<TestType>");
-	experiment<rvector, std::string>("rvector<std::string>");
-	experiment<std::vector, std::string>("std::vector<std::string>");
-	experiment<folly::fbvector, std::string>("folly::fbvector<std::string>");
-	experiment<boost_vector, std::string>("boost_vector<std::string>");
-	experiment<eastl::vector, std::string>("eastl::vector<std::string>");
+	
+	// experiment<rvector, std::string>("rvector<std::string_alloc>");
+	// experiment<std::vector, std::string>("std::vector<std::string_alloc>");
+	// experiment<folly::fbvector, std::string>("folly::fbvector<std::string>");
+	// experiment<boost_vector, std::string>("boost_vector<std::string>");
+	// experiment<eastl::vector, std::string>("eastl::vector<std::string>");
 
 	// experiment<rvector, std::array<int, 10>>("rvector<std::array<int,10>>");
 	// experiment<std::vector, std::array<int, 10>>("std::vector<std::array<int,10>>");
@@ -388,7 +433,7 @@ int main()
 	
 	// experiment<std::vector, std::string, int, std::array<int, 10>>("std::vector<std::string, int, std::array<int,10>>", 1000);
 	// experiment<rvector, std::string, int, std::array<int, 10>>("rvector<std::string, int, std::array<int,10>>", 1000);
-	// experiment<folly::fbvector, std::string, int, std::array<int, 10>>("folly::fbvector<std::string, int, std::array<int,10>>", 100);
+	// experiment<folly::fbvector, std::string, int, std::array<int, 10>>("folly::fbvector<std::string, int, std::array<int,10>>", 1000);
 	// experiment<boost_vector, std::string, int, std::array<int, 10>>("boost_vector<std::string, int, std::array<int,10>>", 1000);
 	// experiment<eastl::vector, std::string, int, std::array<int, 10>>("eastl::vector<std::string, int, std::array<int,10>>", 1000);
 }
