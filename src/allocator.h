@@ -38,7 +38,7 @@ namespace mm
 
 	using size_type = size_t;
 	template <typename T>
-	constexpr size_t map_threshold = 4096 * 100000 / sizeof(T);
+	constexpr size_t map_threshold = 4096 / sizeof(T);
 
 	template<typename T>
 	T* allocate(size_type n)

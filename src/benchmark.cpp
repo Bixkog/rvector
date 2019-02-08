@@ -113,7 +113,7 @@ public:
 	void RunSimulation(int iter = 1000) {
 		for(int i = 0; i < iter; i++) {
 			BenchTimer bt("Simulation");
-			(dispatch_action<Ts>(), ...);
+			(dispatch_action<Ts>(i), ...);
 			if((i + 1) % 100 == 0) {
 				BenchTimer::save_epoch(i / 100);
 			}
@@ -164,15 +164,15 @@ private:
 	}
 
 	template <typename T>
-	void push_back_action() {
+	void push_back_action(int i) {
 		auto& typed_env = std::get<V<V<T>>>(env);
 		if(typed_env.size() == 0) {
-			construct_action<T>();
+			construct_action<T>(i);
 			return;
 		}
 		std::uniform_int_distribution<> q_dist(1, typed_env.size() / 3 + 1);
 		std::uniform_int_distribution<> pick_dist(0, typed_env.size()-1);
-		std::uniform_int_distribution<> size_dist(1, 100000);
+		std::uniform_int_distribution<> size_dist(1, i * 100);
 		int q = q_dist(gen);
 
 		BenchTimer bt("push_back");
@@ -185,10 +185,10 @@ private:
 	}
 
 	template <typename T>
-	void pop_back_action() {
+	void pop_back_action(int i) {
 		auto& typed_env = std::get<V<V<T>>>(env);
 		if(typed_env.size() == 0) {
-			construct_action<T>();
+			construct_action<T>(i);
 			return;
 		}
 		std::uniform_int_distribution<> q_dist(1, typed_env.size() / 3 + 1);
@@ -206,10 +206,10 @@ private:
 	}
 
 	template <typename T>
-	void construct_action() {
+	void construct_action(int i) {
 		auto& typed_env = std::get<V<V<T>>>(env);
 		std::uniform_int_distribution<> q_dist(1, 3);
-		std::uniform_int_distribution<> size_dist(1, 1000);
+		std::uniform_int_distribution<> size_dist(1, i + 10);
 
 		int q = q_dist(gen);
 		
@@ -223,10 +223,10 @@ private:
 	}
 
 	template <typename T>
-	void copy_action() {
+	void copy_action(int i) {
 		auto& typed_env = std::get<V<V<T>>>(env);
 		if(typed_env.size() == 0) {
-			construct_action<T>();
+			construct_action<T>(i);
 			return;
 		}
 		std::uniform_int_distribution<> q_dist(1, 3);
@@ -242,15 +242,15 @@ private:
 	}
 
 	template <typename T>
-	void insert_action() {
+	void insert_action(int i) {
 		auto& typed_env = std::get<V<V<T>>>(env);
 		if(typed_env.size() == 0) {
-			construct_action<T>();
+			construct_action<T>(i);
 			return;
 		}
 		std::uniform_int_distribution<> q_dist(1, typed_env.size() / 3 + 1);
 		std::uniform_int_distribution<> pick_dist(0, typed_env.size() - 1);
-		std::uniform_int_distribution<> size_dist(1, 1000);
+		std::uniform_int_distribution<> size_dist(1, i);
 
 		int q = q_dist(gen);
 		
@@ -271,10 +271,10 @@ private:
 	}
 
 	template <typename T>
-	void erase_action() {
+	void erase_action(int i) {
 		auto& typed_env = std::get<V<V<T>>>(env);
 		if(typed_env.size() == 0) {
-			construct_action<T>();
+			construct_action<T>(i);
 			return;
 		}
 		std::uniform_int_distribution<> q_dist(1, typed_env.size() / 3 + 1);
@@ -297,15 +297,15 @@ private:
 
 	constexpr static int actions_num = 6;
 	template<typename T>
-	void dispatch_action() {
+	void dispatch_action(int i) {
 		std::uniform_int_distribution<> action_dist(1, actions_num);
 		switch(action_dist(gen)) {
-			case 1: push_back_action<T>(); break;
-			case 2: pop_back_action<T>(); break;
-			case 3: construct_action<T>(); break;
-			case 4: copy_action<T>(); break;
-			case 5: insert_action<T>(); break;
-			case 6: erase_action<T>(); break;
+			case 1: push_back_action<T>(i); break;
+			case 2: pop_back_action<T>(i); break;
+			case 3: construct_action<T>(i); break;
+			case 4: copy_action<T>(i); break;
+			case 5: insert_action<T>(i); break;
+			case 6: erase_action<T>(i); break;
 		}
 	}
 
@@ -316,7 +316,7 @@ private:
 };
 
 template <template<typename> typename V, typename... Ts>
-void experiment(std::string name, int max_it = 1500, int tests = 10) {
+void experiment(std::string name, int max_it = 1000, int tests = 10) {
 	malloc_trim(0);
 	BenchTimer::data.resize(max_it / 100);
 	for(int seed = 12345512; seed < 12345512 + tests; seed++) {
@@ -334,7 +334,7 @@ void experiment(std::string name, int max_it = 1500, int tests = 10) {
 				<< data[i]["Simulation"] << "s" << std::endl;
 	}
 
-	std::ofstream out("data/additional/" + name + ".csv");
+	std::ofstream out("data/additional/add2/" + name + ".csv");
 
 	out << "iterations";
 	for(auto const& [k, v] : data[0]) {
@@ -396,44 +396,45 @@ void push_back_bench(std::string name, int it_count = 1000000000) {
 
 int main()
 {
-	// push_back_bench<rvector, int>("rvector<int>");
-	// push_back_bench<std::vector, int>("std::vector<int>");
-	// push_back_bench<folly::fbvector, int>("folly::fbvector<int>");
-	// push_back_bench<eastl::vector, int>("eastl::vector<int>");
-	// push_back_bench<boost_vector, int>("boost_vector<int>");
+	push_back_bench<rvector, int>("rvector<int>");
+	push_back_bench<std::vector, int>("std::vector<int>");
+	push_back_bench<folly::fbvector, int>("folly::fbvector<int>");
+	push_back_bench<eastl::vector, int>("eastl::vector<int>");
+	push_back_bench<boost_vector, int>("boost_vector<int>");
 
-	// push_back_bench<rvector, std::string>("rvector");
-	// push_back_bench<std::vector, std::string>("std::vector");
-	// push_back_bench<folly::fbvector, std::string>("folly::fbvector");
-	// push_back_bench<eastl::vector, std::string>("eastl::vector");
-	// push_back_bench<boost_vector, std::string>("boost_vector");
-	// experiment<std::vector, int>("std::vector<int>", 1000);
-	// experiment<rvector, int>("rvector<int>", 1000);
-	// experiment<folly::fbvector, int>("folly::fbvector<int>", 5000);
-	// experiment<boost_vector, int>("boost_vector<int>", 5000);
-	// experiment<eastl::vector, int>("eastl::vector<int>", 5000);
-	
-	// experiment<rvector, TestType>("rvector<TestType>");
-	// experiment<std::vector, TestType>("std::vector<TestType>");
-	// experiment<folly::fbvector, TestType>("folly::fbvector<TestType>");
-	// experiment<boost_vector, TestType>("boost_vector<TestType>");
-	// experiment<eastl::vector, TestType>("eastl::vector<TestType>");
-	
-	// experiment<rvector, std::string>("rvector<std::string_alloc>");
-	// experiment<std::vector, std::string>("std::vector<std::string_alloc>");
-	// experiment<folly::fbvector, std::string>("folly::fbvector<std::string>");
-	// experiment<boost_vector, std::string>("boost_vector<std::string>");
-	// experiment<eastl::vector, std::string>("eastl::vector<std::string>");
+	push_back_bench<rvector, std::string>("rvector<std::string>");
+	push_back_bench<std::vector, std::string>("std::vector");
+	push_back_bench<folly::fbvector, std::string>("folly::fbvector");
+	push_back_bench<eastl::vector, std::string>("eastl::vector");
+	push_back_bench<boost_vector, std::string>("boost_vector");
 
-	// experiment<rvector, std::array<int, 10>>("rvector<std::array<int,10>>");
-	// experiment<std::vector, std::array<int, 10>>("std::vector<std::array<int,10>>");
-	// experiment<folly::fbvector,  std::array<int, 10>>("folly::fbvector<std::array<int,10>>");
-	// experiment<boost_vector,  std::array<int, 10>>("boost_vector<std::array<int,10>>");
-	// experiment<eastl::vector,  std::array<int, 10>>("eastl::vector<std::array<int,10>>");
+	experiment<std::vector, int>("std::vector<int>", 3000);
+	experiment<rvector, int>("rvector<int>", 3000);
+	experiment<folly::fbvector, int>("folly::fbvector<int>", 3000);
+	experiment<boost_vector, int>("boost_vector<int>", 3000);
+	experiment<eastl::vector, int>("eastl::vector<int>", 3000);
 	
-	// experiment<std::vector, std::string, int, std::array<int, 10>>("std::vector<std::string, int, std::array<int,10>>", 1000);
-	// experiment<rvector, std::string, int, std::array<int, 10>>("rvector<std::string, int, std::array<int,10>>", 1000);
-	// experiment<folly::fbvector, std::string, int, std::array<int, 10>>("folly::fbvector<std::string, int, std::array<int,10>>", 1000);
-	// experiment<boost_vector, std::string, int, std::array<int, 10>>("boost_vector<std::string, int, std::array<int,10>>", 1000);
-	// experiment<eastl::vector, std::string, int, std::array<int, 10>>("eastl::vector<std::string, int, std::array<int,10>>", 1000);
+	experiment<rvector, TestType>("rvector<TestType>", 1500);
+	experiment<std::vector, TestType>("std::vector<TestType>", 1500);
+	experiment<folly::fbvector, TestType>("folly::fbvector<TestType>", 1500);
+	experiment<boost_vector, TestType>("boost_vector<TestType>", 1500);
+	experiment<eastl::vector, TestType>("eastl::vector<TestType>", 1500);
+	
+	experiment<rvector, std::string>("rvector<std::string>", 1200);
+	experiment<std::vector, std::string>("std::vector<std::string>", 1200);
+	experiment<folly::fbvector, std::string>("folly::fbvector<std::string>", 1200);
+	experiment<boost_vector, std::string>("boost_vector<std::string>", 1200);
+	experiment<eastl::vector, std::string>("eastl::vector<std::string>", 1200);
+
+	experiment<rvector, std::array<int, 10>>("rvector<std::array<int,10>>", 1200);
+	experiment<std::vector, std::array<int, 10>>("std::vector<std::array<int,10>>", 1200);
+	experiment<folly::fbvector,  std::array<int, 10>>("folly::fbvector<std::array<int,10>>", 1200);
+	experiment<boost_vector,  std::array<int, 10>>("boost_vector<std::array<int,10>>", 1200);
+	experiment<eastl::vector,  std::array<int, 10>>("eastl::vector<std::array<int,10>>", 1200);
+	
+	experiment<std::vector, std::string, int, std::array<int, 10>>("std::vector<std::string, int, std::array<int,10>>", 1000);
+	experiment<rvector, std::string, int, std::array<int, 10>>("rvector<std::string, int, std::array<int,10>>", 1000);
+	experiment<folly::fbvector, std::string, int, std::array<int, 10>>("folly::fbvector<std::string, int, std::array<int,10>>", 1000);
+	experiment<boost_vector, std::string, int, std::array<int, 10>>("boost_vector<std::string, int, std::array<int,10>>", 1000);
+	experiment<eastl::vector, std::string, int, std::array<int, 10>>("eastl::vector<std::string, int, std::array<int,10>>", 1000);
 }
